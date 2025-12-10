@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NMDC Dantewada — Buildings Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- MapLibre -->
+<link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+
+<!-- Turf (for bbox / area etc.) -->
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+
+<!-- Chart.js for pie charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;width:100%;font-family:"Segoe UI",Arial,sans-serif;background:#f5f7fb;}
+
+/* Top header */
+header.site-header{
+  position:fixed;top:0;left:0;right:0;height:60px;
+  background:linear-gradient(90deg,#b71c1c,#c62828);
+  color:#fff;display:flex;align-items:center;padding:0 16px;z-index:1000;
+  box-shadow:0 2px 6px rgba(0,0,0,0.18);
+}
+.site-header h1{font-size:18px;font-weight:800;margin-left:6px;}
+.site-header .nmdc-logo{height:40px; margin-right:10px;}
+
+/* Layout */
+#page-body{position:absolute;top:60px;left:0;right:0;bottom:0;display:flex;}
+
+/* Map */
+#map{flex:1 1 auto;position:relative;}
+
+/* Right info + analysis panel */
+#rightPanel{width:360px;min-width:260px;background:#ffffff;border-left:1px solid rgba(0,0,0,0.08);box-shadow:-2px 0 16px rgba(0,0,0,0.05);padding:10px 14px;overflow:auto;}
+#rightPanel h2{margin:0 0 8px 0;color:#2b6cb0;text-align:center;}
+
+/* analysis section */
+#analysisSection{margin-bottom:10px;padding:8px;border-radius:8px;background:linear-gradient(135deg,rgba(43,108,176,0.06),rgba(43,108,176,0.02));border:1px solid rgba(0,0,0,0.05);}
+#analysisSection label{display:block;font-size:13px;font-weight:700;color:#0b2340;margin-bottom:4px;}
+#analysisField{width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.12);font-size:13px;margin-bottom:6px;}
+#analysisStats{font-size:12px;margin-top:4px;color:#334155;}
+.chart-container{position:relative;width:100%;height:220px;}
+
+/* info table */
+#infoTitle{font-weight:700;margin:8px 0 4px 0;color:#0b2340;}
+.infoTable{width:100%;border-collapse:collapse;font-size:13px;}
+.infoTable td{padding:4px 3px;vertical-align:top;}
+.infoTable td.key{width:40%;color:#2b6cb0;font-weight:600;padding-right:6px;}
+.infoTable td.value{color:#111;}
+.small-muted{display:block;margin-top:6px;font-size:12px;color:rgba(0,0,0,0.6);}
+
+/* Layers button */
+#topCenterToolbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:1100;}
+.toolbar-card{background:#fff;border-radius:10px;padding:6px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,0.18);border:1px solid rgba(0,0,0,0.06);}
+.tc-btn{border:none;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;background:#f5f5f5;}
+.tc-btn.primary{background:linear-gradient(135deg,#ffd700,#ffed4e);} .tc-btn.white{background:#fff;}
+
+/* Layer list dropdown */
+#layerList{position:absolute;top:46px;z-index:1100;display:none;background:#ffffff;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 10px 30px rgba(0,0,0,0.18);right:50%;transform:translateX(50%);font-size:13px;}
+#layerList label{display:flex;align-items:center;gap:6px;margin:4px 0;}
+#layerList input[type=checkbox], #layerList input[type=radio]{width:16px;height:16px;}
+
+/* MapLibre attribution bottom-right styling */
+.maplibregl-ctrl-bottom-right{right:10px !important;bottom:10px !important;}
+.maplibregl-ctrl-attrib{background:#1e3a8a !important;color:#fff !important;border-radius:6px !important;padding:6px 10px !important;font-size:11px !important;}
+.maplibregl-ctrl-top-right{top:60px !important;}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <!-- NMDC logo placed left of the title -->
+  <img class="nmdc-logo"
+       src="https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/NMDCLOGO.png"
+       alt="NMDC Logo" />
+  <h1>NMDC Model Village Household Survey</h1>
+</header>
+
+<div id="page-body">
+  <div id="map">
+    <!-- top center tools -->
+    <div id="topCenterToolbar">
+      <div class="toolbar-card">
+        <button id="btnLayers" class="tc-btn white" title="Show / hide layers panel">Layers</button>
+      </div>
+    </div>
+
+    <!-- Layer selector -->
+    <div id="layerList">
+      <div style="font-weight:700;margin-bottom:4px;">Base map</div>
+      <label><input type="radio" name="basemap" value="osm" checked> OpenStreetMap</label>
+      <label><input type="radio" name="basemap" value="satellite"> Satellite imagery</label>
+      <label><input type="radio" name="basemap" value="bhuvan-lulc"> LULC (Bhuvan)</label>
+
+      <hr style="margin:8px 0;border:none;border-top:1px solid rgba(0,0,0,0.1);" />
+      <div style="font-weight:700;margin-bottom:4px;">Data layers</div>
+      <label><input type="checkbox" id="toggleBuildings" checked> Buildings</label>
+      <label><input type="checkbox" id="toggleBoundary" checked> Village boundary</label>
+    </div>
+  </div>
+
+  <div id="rightPanel">
+    <h2>Quick Analysis</h2>
+
+    <!-- ANALYSIS + PIE CHART -->
+    <div id="analysisSection">
+      <label for="analysisField">Select variable for analysis</label>
+      <select id="analysisField">
+        <option value="Floors">Floors</option>
+        <option value="Caste">Caste</option>
+        <option value="Vulnerabil">Vulnerable</option>
+        <option value="Familytype">Familytype</option>
+        <option value="Totalmembe">Total members</option>
+        <option value="disability">Disability</option>
+        <option value="Migration">Migration</option>
+        <option value="Education">Education</option>
+        <option value="SchoolDrop">SchoolDrop</option>
+        <option value="Smartphone">Smartphone</option>
+        <option value="Internet">Internet</option>
+        <option value="Livelihood">Livelihood</option>
+        <option value="Landowners">Landowners</option>
+      </select>
+
+      <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+
+      <div id="analysisStats">
+        <span id="statTotal"></span>
+        <span id="statTop"></span>
+      </div>
+    </div>
+
+    <!-- INFO OF SELECTED FEATURE -->
+    <h2>Information</h2>
+    <div id="infoTitle">Click a building or boundary</div>
+    <table class="infoTable" id="infoTable"></table>
+    <span class="small-muted" id="infoTypeLine">Attributes from the selected feature will appear here.</span>
+  </div>
+</div>
+
+<script>
+// ----------- Simple logger -----------
+function log(msg){ console.log(msg); }
+
+// ----------- Map init -----------
+const map = new maplibregl.Map({
+  container: 'map',
+  style: { version: 8, sources: {}, layers: [] },
+  center: [80.75, 18.9],
+  zoom: 20,
+  pitch: 45,
+  bearing: 0,
+  attributionControl: false
+});
+map.addControl(new maplibregl.NavigationControl(), 'top-right');
+map.addControl(new maplibregl.AttributionControl({ compact:false, customAttribution: 'Designed by: WOSCA,Keonjhar,Odisha' }), 'bottom-right');
+
+// URLs for your data
+const BUILDINGS_URL = 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Buildings.geojson';
+const BOUNDARY_URL  = 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/VillageBoundary.geojson';
+
+let buildingsData = null;
+let boundaryData  = null;
+
+// helper fetch
+async function fetchJSON(url){
+  log('Fetching ' + url);
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
+  return res.json();
+}
+
+// ---------- HEIGHT from Floors (text) ----------
+function buildingHeightExpression() {
+  // using 'match' on Floors attribute; default 3m
+  return [
+    'match',
+    ['to-string', ['coalesce', ['get','Floors'], 'GROUNDFLOOR']],
+    'GROUNDFLOOR', 3,
+    'GROUND FLOOR', 3,
+    'G+1', 6,
+    'G+2', 9,
+    'G+3', 12,
+    'G+4', 15,
+    3
+  ];
+}
+
+// ---------- Fill right panel with ALL attributes ----------
+function fillInfoPanel(title, feature){
+  const titleEl = document.getElementById('infoTitle');
+  const tableEl = document.getElementById('infoTable');
+  const typeEl  = document.getElementById('infoTypeLine');
+
+  titleEl.textContent = title || 'Information';
+  tableEl.innerHTML = '';
+
+  if (!feature || !feature.properties) {
+    typeEl.textContent = 'No feature selected.';
+    return;
+  }
+
+  const props = feature.properties;
+  const keys = Object.keys(props);
+
+  keys.forEach(k => {
+    const tr = document.createElement('tr');
+    const tk = document.createElement('td');
+    const tv = document.createElement('td');
+    tk.className = 'key';
+    tv.className = 'value';
+    tk.textContent = k;
+    tv.textContent = (props[k] === null || typeof props[k] === 'undefined' || props[k] === '') ? 'N/A' : String(props[k]);
+    tr.appendChild(tk);
+    tr.appendChild(tv);
+    tableEl.appendChild(tr);
+  });
+
+  typeEl.textContent = `Layer: ${title}`;
+}
+
+// ---------- fit map to data ----------
+function fitToData() {
+  try {
+    let geo = boundaryData || buildingsData;
+    if (!geo) return;
+    const b = turf.bbox(geo);
+    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0 });
+  } catch(e){
+    log('fitToData error: ' + e);
+  }
+}
+
+// ---------- PIE CHART + QUICK ANALYSIS ----------
+let pieChart = null;
+const palette = ['#2563eb','#16a34a','#f97316','#e11d48','#7c3aed','#0f766e','#b45309','#be123c','#15803d','#1e40af','#0e7490','#4f46e5','#a855f7','#1d4ed8','#dc2626'];
+
+// compute counts for a field (defensive)
+function computeCounts(fieldName){
+  const counts = {};
+  if (!buildingsData || !Array.isArray(buildingsData.features)) return { counts, total: 0 };
+  const feats = buildingsData.features;
+  for (const f of feats) {
+    const props = f.properties || {};
+    const vRaw = props[fieldName];
+    const v = (vRaw === null || typeof vRaw === 'undefined' || vRaw === '') ? 'No data' : String(vRaw);
+    counts[v] = (counts[v] || 0) + 1;
+  }
+  return { counts, total: feats.length };
+}
+
+// update building colours according to selected field (safe)
+function updateBuildingColors(fieldName, counts){
+  if (!map.getLayer('buildings-3d')) return;
+  const labels = Object.keys(counts);
+  if (labels.length === 0){
+    map.setPaintProperty('buildings-3d', 'fill-extrusion-color', '#3da5ff');
+    return;
+  }
+  const expr = [ 'match', ['to-string', ['coalesce', ['get', fieldName], 'No data']] ];
+  labels.forEach((label, idx) => { expr.push(label); expr.push(palette[idx % palette.length]); });
+  expr.push('#bbbbbb'); // default
+  map.setPaintProperty('buildings-3d', 'fill-extrusion-color', expr);
+}
+
+// update pie chart + stats (defensive)
+function updateAnalysis(fieldName){
+  if (!buildingsData) { // nothing to show yet
+    document.getElementById('statTotal').textContent = '';
+    document.getElementById('statTop').textContent = '';
+    if (pieChart) { pieChart.data.labels = []; pieChart.data.datasets[0].data = []; pieChart.update(); }
+    return;
+  }
+
+  const { counts, total } = computeCounts(fieldName);
+  const labels = Object.keys(counts);
+  const data = labels.map(l => counts[l]);
+
+  const ctxEl = document.getElementById('pieChart');
+  if (!ctxEl) return;
+  const ctx = ctxEl.getContext('2d');
+
+  if (!pieChart) {
+    pieChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{ data: data, backgroundColor: labels.map((_,i)=>palette[i % palette.length]) }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ boxWidth:14, font:{ size:11 } } } }
+      }
+    });
+  } else {
+    pieChart.data.labels = labels;
+    pieChart.data.datasets[0].data = data;
+    pieChart.data.datasets[0].backgroundColor = labels.map((_,i)=>palette[i % palette.length]);
+    pieChart.update();
+  }
+
+  updateBuildingColors(fieldName, counts);
+
+  document.getElementById('statTotal').textContent = `Total households / buildings: ${total}`;
+  if (labels.length === 0) {
+    document.getElementById('statTop').textContent = 'No data in this field.';
+    return;
+  }
+  let topLabel = labels[0], topCount = counts[topLabel];
+  labels.forEach(l => { if (counts[l] > topCount) { topLabel = l; topCount = counts[l]; } });
+  const topPerc = total > 0 ? ((topCount*100)/total).toFixed(2) : 0;
+  document.getElementById('statTop').textContent = `Highest category: "${topLabel}" — ${topCount} (${topPerc}%)`;
+}
+
+document.getElementById('analysisField').addEventListener('change', function(){
+  updateAnalysis(this.value);
+});
+
+// ---------- Map load: add basemaps and your layers ----------
+map.on('load', async () => {
+  try {
+    // ---- Base maps ----
+    map.addSource('osm', { type:'raster', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize:256 });
+    map.addLayer({ id:'osm', type:'raster', source:'osm', paint:{ 'raster-opacity':1 } });
+
+map.addSource('satellite', {
+  type: 'raster',
+  tiles: [
+    'https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=VTyVRu9eUsVOXeBj5TqJ'
+  ],
+  tileSize: 256
+});
+map.addLayer({
+  id: 'satellite',
+  type: 'raster',
+  source: 'satellite',
+  layout: { visibility: 'none' },
+  paint: { 'raster-opacity': 1 }
+});
+
+
+    // --- Bhuvan WMS LULC as raster tiles (visibility initially none) ---
+    map.addSource('bhuvan-lulc', {
+      type: 'raster',
+      tiles: [
+        // using WMS GetMap template; server sometimes prefers 3857 - keep as is; opacity can be tuned
+        'https://bhuvan-vec2.nrsc.gov.in/bhuvan/gwc/service/wms?' +
+        'SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&' +
+        'LAYERS=sisdp_phase2:SISDP_P2_LULC_10K_2016_2019_CG&' +
+        'STYLES=&FORMAT=image/png&TRANSPARENT=true&' +
+        'SRS=EPSG:3857&' +
+        'BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256'
+      ],
+      tileSize:256
+    });
+    map.addLayer({ id:'bhuvan-lulc', type:'raster', source:'bhuvan-lulc', layout:{ visibility:'none' }, paint:{ 'raster-opacity':0.95 } });
+
+    // ---- Your GeoJSON layers ----
+    buildingsData = await fetchJSON(BUILDINGS_URL);
+    boundaryData  = await fetchJSON(BOUNDARY_URL);
+
+    // boundary
+    map.addSource('village-boundary', { type:'geojson', data:boundaryData });
+    map.addLayer({ id:'village-fill', type:'fill', source:'village-boundary', paint:{ 'fill-color':'#fff59d','fill-opacity':0 } });
+    map.addLayer({ id:'village-outline', type:'line', source:'village-boundary', paint:{ 'line-color':'#f57f17','line-width':2.5 } });
+
+    // ---------- LULC CLIP MASK (robust) ----------
+    try {
+      // clean boundary (small buffer helps fix self-intersections in many datasets)
+      let boundaryClean;
+      try {
+        boundaryClean = turf.buffer(boundaryData, 0.0001, { units: 'kilometers' });
+      } catch(e) {
+        console.warn('turf.buffer failed - using raw boundary', e);
+        boundaryClean = boundaryData;
+      }
+
+      // build mask (world minus village polygon)
+      const lulcMaskGeoJSON = turf.mask(boundaryClean);
+
+      // add mask source and mask layer (put mask ABOVE the LULC but below outlines/buildings)
+      map.addSource('lulc-mask', { type: 'geojson', data: lulcMaskGeoJSON });
+
+      // insert mask BEFORE village-outline so it sits above LULC but under the outline & other vectors
+      map.addLayer({
+        id: 'lulc-mask',
+        type: 'fill',
+        source: 'lulc-mask',
+        paint: { 'fill-color': '#f5f7fb', 'fill-opacity': 1 }
+      }, 'village-outline');
+
+      // mask initially hidden (we'll toggle when bhuvan-lulc is active)
+      map.setLayoutProperty('lulc-mask','visibility','none');
+
+      console.log('LULC clip mask created.');
+    } catch (err) {
+      console.error('Failed to create LULC mask:', err);
+      alert('Could not create LULC clip mask: ' + (err.message||err));
+    }
+
+    // buildings
+    map.addSource('buildings', { type:'geojson', data:buildingsData });
+map.addLayer({
+  id:'buildings-3d',
+  type:'fill-extrusion',
+  source:'buildings',
+  paint:{
+    'fill-extrusion-color':'#3da5ff',
+    // ⬇️ multiply by 3 for vertical exaggeration
+    'fill-extrusion-height': ['*', buildingHeightExpression(), 3],
+    'fill-extrusion-opacity':0.9
+  }
+});
+
+
+    // Fit map view
+    fitToData();
+    log('All layers added.');
+
+    // initial analysis only AFTER buildingsData exists
+    updateAnalysis(document.getElementById('analysisField').value);
+
+  } catch(err){
+    console.error(err);
+    alert('Error loading data: ' + err.message);
+  }
+});
+
+// ----------- Click behaviour -----------
+map.on('click', (e) => {
+  const features = map.queryRenderedFeatures(e.point, { layers: ['buildings-3d','village-outline','village-fill'] });
+  if (!features.length) return;
+  const f = features[0];
+  if (f.layer && f.layer.id === 'buildings-3d') fillInfoPanel('Buildings', f);
+  else fillInfoPanel('Village Boundary', f);
+});
+
+map.on('mousemove', (e) => {
+  const features = map.queryRenderedFeatures(e.point, { layers: ['buildings-3d','village-outline','village-fill'] });
+  map.getCanvas().style.cursor = features.length ? 'pointer' : '';
+});
+
+// ----------- Layer panel UI -----------
+document.getElementById('btnLayers').addEventListener('click', () => {
+  const el = document.getElementById('layerList');
+  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+});
+
+// basemap toggle function (safe)
+function setBasemap(layerId) {
+  const ids = ['osm','satellite','bhuvan-lulc'];
+  ids.forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id,'visibility', id === layerId ? 'visible' : 'none');
+  });
+  // show/hide LULC mask together with bhuvan-lulc
+  if (map.getLayer('lulc-mask')) {
+    const visible = (layerId === 'bhuvan-lulc') ? 'visible' : 'none';
+    map.setLayoutProperty('lulc-mask','visibility', visible);
+  }
+}
+// attach radio listeners (defensive: wait for DOM)
+document.querySelectorAll('input[name="basemap"]').forEach(r => {
+  r.addEventListener('change', () => { setBasemap(r.value); });
+});
+
+// toggle buildings
+document.getElementById('toggleBuildings').addEventListener('change', function(){
+  const vis = this.checked ? 'visible' : 'none';
+  if (map.getLayer('buildings-3d')) map.setLayoutProperty('buildings-3d','visibility',vis);
+});
+
+// toggle boundary
+document.getElementById('toggleBoundary').addEventListener('change', function(){
+  const vis = this.checked ? 'visible' : 'none';
+  if (map.getLayer('village-fill')) map.setLayoutProperty('village-fill','visibility',vis);
+  if (map.getLayer('village-outline')) map.setLayoutProperty('village-outline','visibility',vis);
+});
+</script>
+</body>
+</html>
