@@ -22,10 +22,11 @@ html,body{height:100%;width:100%;font-family:"Segoe UI",Arial,sans-serif;backgro
 /* Top header */
 header.site-header{
   position:fixed;top:0;left:0;right:0;height:60px;
-  background:linear-gradient(90deg,#b71c1c,#c62828);
+  background:linear-gradient(90deg,#0d47a1,#1976d2);
   color:#fff;display:flex;align-items:center;padding:0 16px;z-index:1000;
   box-shadow:0 2px 6px rgba(0,0,0,0.18);
 }
+
 .site-header h1{font-size:18px;font-weight:800;margin-left:6px;}
 .site-header .nmdc-logo{height:40px; margin-right:10px;}
 
@@ -35,16 +36,23 @@ header.site-header{
 /* Map */
 #map{flex:1 1 auto;position:relative;}
 
-/* Right info + analysis panel */
-#rightPanel{width:360px;min-width:260px;background:#ffffff;border-left:1px solid rgba(0,0,0,0.08);box-shadow:-2px 0 16px rgba(0,0,0,0.05);padding:10px 14px;overflow:auto;}
+/* Right info panel */
+#rightPanel{
+  width:360px;min-width:260px;background:#ffffff;border-left:1px solid rgba(0,0,0,0.08);
+  box-shadow:-2px 0 16px rgba(0,0,0,0.05);padding:10px 14px;overflow:auto;
+  position:relative;
+  transition:width 0.3s ease, padding 0.3s ease, border-left 0.3s ease;
+}
 #rightPanel h2{margin:0 0 8px 0;color:#2b6cb0;text-align:center;}
 
-/* analysis section */
-#analysisSection{margin-bottom:10px;padding:8px;border-radius:8px;background:linear-gradient(135deg,rgba(43,108,176,0.06),rgba(43,108,176,0.02));border:1px solid rgba(0,0,0,0.05);}
-#analysisSection label{display:block;font-size:13px;font-weight:700;color:#0b2340;margin-bottom:4px;}
-#analysisField{width:100%;padding:6px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.12);font-size:13px;margin-bottom:6px;}
-#analysisStats{font-size:12px;margin-top:4px;color:#334155;}
-.chart-container{position:relative;width:100%;height:220px;}
+/* Right panel hidden */
+.rightPanel-hidden{
+  width:0 !important;
+  min-width:0 !important;
+  padding:0 !important;
+  border-left:0 !important;
+  overflow:hidden !important;
+}
 
 /* info table */
 #infoTitle{font-weight:700;margin:8px 0 4px 0;color:#0b2340;}
@@ -54,20 +62,195 @@ header.site-header{
 .infoTable td.value{color:#111;}
 .small-muted{display:block;margin-top:6px;font-size:12px;color:rgba(0,0,0,0.6);}
 
-/* Layers button */
-#topCenterToolbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:1100;}
-.toolbar-card{background:#fff;border-radius:10px;padding:6px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,0.18);border:1px solid rgba(0,0,0,0.06);}
-.tc-btn{border:none;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;background:#f5f5f5;}
-.tc-btn.primary{background:linear-gradient(135deg,#ffd700,#ffed4e);} .tc-btn.white{background:#fff;}
+/* LEFT analysis panel */
+#leftPanel{
+  position:absolute;
+  top:12px;
+  left:8px;
+  bottom:12px;
+  width:320px;
+  max-width:340px;
+  background:#ffffff;
+  border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  padding:10px 12px;
+  z-index:1400;
+  transform:translateX(-110%);
+  transition:transform 0.3s ease;
+  display:flex;
+  flex-direction:column;
+}
+#leftPanel.visible{
+  transform:translateX(0);
+}
+#leftPanel h2{
+  margin:0 0 8px 0;
+  color:#2b6cb0;
+  text-align:center;
+}
+
+/* analysis section (inside left panel) */
+#analysisSection{
+  margin-bottom:10px;
+  padding:8px;
+  border-radius:8px;
+  background:linear-gradient(135deg,rgba(43,108,176,0.06),rgba(43,108,176,0.02));
+  border:1px solid rgba(0,0,0,0.05);
+}
+#analysisSection label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  color:#0b2340;
+  margin-bottom:4px;
+}
+#analysisField{
+  width:100%;
+  padding:6px 8px;
+  border-radius:6px;
+  border:1px solid rgba(0,0,0,0.12);
+  font-size:13px;
+  margin-bottom:6px;
+}
+#analysisStats{
+  font-size:12px;
+  margin-top:4px;
+  color:#334155;
+}
+.chart-container{
+  position:relative;
+  width:100%;
+  height:220px;
+}
+
+/* Hamburger button on left side */
+.hamburger-map-btn{
+  position:absolute;
+  top:80px;
+  left:8px;
+  z-index:1500;
+  font-size:20px;
+  background:#ffffff;
+  color:#b71c1c;
+  border:none;
+  border-radius:8px;
+  padding:6px 10px;
+  cursor:pointer;
+  font-weight:800;
+  box-shadow:0 4px 10px rgba(0,0,0,0.18);
+}
+.hamburger-map-btn:hover{
+  background:#f1f5f9;
+}
+.hamburger-map-btn:focus{
+  outline:3px solid rgba(43,108,176,0.3);
+}
+
+/* Close buttons */
+.close-left-btn,
+.close-right-btn{
+  position:absolute;
+  top:6px;
+  right:8px;
+  z-index:1501;
+  border:none;
+  background:#ffffff;
+  color:#d32f2f;
+  font-size:18px;
+  border-radius:6px;
+  padding:2px 8px;
+  cursor:pointer;
+  box-shadow:0 3px 8px rgba(0,0,0,0.16);
+}
+.close-left-btn:hover,
+.close-right-btn:hover{
+  background:#fef2f2;
+}
+
+/* Top center toolbar */
+#topCenterToolbar{
+  position:absolute;
+  top:8px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1100;
+}
+.toolbar-card{
+  background:#fff;
+  border-radius:10px;
+  padding:6px 8px;
+  display:flex;
+  gap:6px;
+  align-items:center;
+  box-shadow:0 8px 24px rgba(0,0,0,0.18);
+  border:1px solid rgba(0,0,0,0.06);
+}
+.tc-btn{
+  border:none;
+  padding:6px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:700;
+  background:#f5f5f5;
+}
+.tc-btn.primary{background:linear-gradient(135deg,#ffd700,#ffed4e);}
+.tc-btn.white{background:#fff;}
+.tc-btn.active{
+  background:#2b6cb0;
+  color:#ffffff;
+}
 
 /* Layer list dropdown */
-#layerList{position:absolute;top:46px;z-index:1100;display:none;background:#ffffff;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);box-shadow:0 10px 30px rgba(0,0,0,0.18);right:50%;transform:translateX(50%);font-size:13px;}
-#layerList label{display:flex;align-items:center;gap:6px;margin:4px 0;}
-#layerList input[type=checkbox], #layerList input[type=radio]{width:16px;height:16px;}
+#layerList{
+  position:absolute;
+  top:46px;
+  z-index:1100;
+  display:none;
+  background:#ffffff;
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,0.08);
+  box-shadow:0 10px 30px rgba(0,0,0,0.18);
+  right:50%;
+  transform:translateX(50%);
+  font-size:13px;
+}
+#layerList label{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:4px 0;
+}
+#layerList input[type=checkbox],
+#layerList input[type=radio]{
+  width:16px;height:16px;
+}
+
+/* Measure info label */
+#measureInfo{
+  position:absolute;
+  bottom:12px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1200;
+  background:#ffffff;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.18);
+  display:none;
+}
 
 /* MapLibre attribution bottom-right styling */
 .maplibregl-ctrl-bottom-right{right:10px !important;bottom:10px !important;}
-.maplibregl-ctrl-attrib{background:#1e3a8a !important;color:#fff !important;border-radius:6px !important;padding:6px 10px !important;font-size:11px !important;}
+.maplibregl-ctrl-attrib{
+  background:#1e3a8a !important;
+  color:#fff !important;
+  border-radius:6px !important;
+  padding:6px 10px !important;
+  font-size:11px !important;
+}
 .maplibregl-ctrl-top-right{top:60px !important;}
 </style>
 </head>
@@ -82,9 +265,50 @@ header.site-header{
 
 <div id="page-body">
   <div id="map">
+    <!-- LEFT QUICK ANALYSIS PANEL -->
+    <div id="leftPanel">
+      <button id="closeLeftPanelBtn" class="close-left-btn" title="Close analysis panel">✖</button>
+      <h2>Quick Analysis</h2>
+
+      <div id="analysisSection">
+        <label for="analysisField">Select variable for analysis</label>
+        <select id="analysisField">
+          <option value="Floors">Floors</option>
+          <option value="Caste">Caste</option>
+          <option value="Vulnerabil">Vulnerable</option>
+          <option value="Familytype">Familytype</option>
+          <option value="Totalmembe">Total members</option>
+          <option value="disability">Disability</option>
+          <option value="Migration">Migration</option>
+          <option value="Education">Education</option>
+          <option value="SchoolDrop">SchoolDrop</option>
+          <option value="Smartphone">Smartphone</option>
+          <option value="Internet">Internet</option>
+          <option value="Livelihood">Livelihood</option>
+          <option value="Landowners">Landowners</option>
+        </select>
+
+        <div class="chart-container">
+          <canvas id="pieChart"></canvas>
+        </div>
+
+        <div id="analysisStats">
+          <span id="statTotal"></span>
+          <span id="statTop"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HAMBURGER TO OPEN LEFT PANEL -->
+    <button id="hamburgerBtn" class="hamburger-map-btn" title="Toggle analysis panel">☰</button>
+
     <!-- top center tools -->
     <div id="topCenterToolbar">
       <div class="toolbar-card">
+        <button id="btn2D" class="tc-btn white" title="Switch to 2D view">2D</button>
+        <button id="btn3D" class="tc-btn white" title="Switch to 3D view">3D</button>
+        <button id="btnMeasure" class="tc-btn white" title="Measure distance">Measure</button>
+        <button id="btnExport" class="tc-btn white" title="Export map as PNG">Export</button>
         <button id="btnLayers" class="tc-btn white" title="Show / hide layers panel">Layers</button>
       </div>
     </div>
@@ -101,41 +325,14 @@ header.site-header{
       <label><input type="checkbox" id="toggleBuildings" checked> Buildings</label>
       <label><input type="checkbox" id="toggleBoundary" checked> Village boundary</label>
     </div>
+
+    <!-- Measure info -->
+    <div id="measureInfo">Click on map to start measuring</div>
   </div>
 
-  <div id="rightPanel">
-    <h2>Quick Analysis</h2>
-
-    <!-- ANALYSIS + PIE CHART -->
-    <div id="analysisSection">
-      <label for="analysisField">Select variable for analysis</label>
-      <select id="analysisField">
-        <option value="Floors">Floors</option>
-        <option value="Caste">Caste</option>
-        <option value="Vulnerabil">Vulnerable</option>
-        <option value="Familytype">Familytype</option>
-        <option value="Totalmembe">Total members</option>
-        <option value="disability">Disability</option>
-        <option value="Migration">Migration</option>
-        <option value="Education">Education</option>
-        <option value="SchoolDrop">SchoolDrop</option>
-        <option value="Smartphone">Smartphone</option>
-        <option value="Internet">Internet</option>
-        <option value="Livelihood">Livelihood</option>
-        <option value="Landowners">Landowners</option>
-      </select>
-
-      <div class="chart-container">
-        <canvas id="pieChart"></canvas>
-      </div>
-
-      <div id="analysisStats">
-        <span id="statTotal"></span>
-        <span id="statTop"></span>
-      </div>
-    </div>
-
-    <!-- INFO OF SELECTED FEATURE -->
+  <!-- RIGHT PANEL: INFORMATION ONLY -->
+  <div id="rightPanel" class="rightPanel-hidden">
+    <button id="closeRightPanelBtn" class="close-right-btn" title="Close information panel">✖</button>
     <h2>Information</h2>
     <div id="infoTitle">Click a building or boundary</div>
     <table class="infoTable" id="infoTable"></table>
@@ -151,8 +348,8 @@ function log(msg){ console.log(msg); }
 const map = new maplibregl.Map({
   container: 'map',
   style: { version: 8, sources: {}, layers: [] },
-  center: [80.75, 18.9],
-  zoom: 20,
+  center: [81.263533, 18.633673],
+  zoom: 17,
   pitch: 45,
   bearing: 0,
   attributionControl: false
@@ -160,12 +357,400 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl(), 'top-right');
 map.addControl(new maplibregl.AttributionControl({ compact:false, customAttribution: 'Designed by: WOSCA,Keonjhar,Odisha' }), 'bottom-right');
 
+// ---------- Panels + buttons ----------
+const leftPanelEl  = document.getElementById('leftPanel');
+const rightPanelEl = document.getElementById('rightPanel');
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+const closeLeftPanelBtn  = document.getElementById('closeLeftPanelBtn');
+const closeRightPanelBtn = document.getElementById('closeRightPanelBtn');
+
+function openLeftPanel(){
+  if(!leftPanelEl) return;
+  leftPanelEl.classList.add('visible');
+  if(map && map.resize){
+    setTimeout(()=>map.resize(), 310);
+  }
+}
+function closeLeftPanel(){
+  if(!leftPanelEl) return;
+  leftPanelEl.classList.remove('visible');
+  if(map && map.resize){
+    setTimeout(()=>map.resize(), 310);
+  }
+}
+function toggleLeftPanel(){
+  if(!leftPanelEl) return;
+  if(leftPanelEl.classList.contains('visible')) closeLeftPanel();
+  else openLeftPanel();
+}
+
+function openRightPanel(){
+  if(!rightPanelEl) return;
+  rightPanelEl.classList.remove('rightPanel-hidden');
+  if(map && map.resize){
+    setTimeout(()=>map.resize(), 310);
+  }
+}
+function closeRightPanel(){
+  if(!rightPanelEl) return;
+  rightPanelEl.classList.add('rightPanel-hidden');
+  if(map && map.resize){
+    setTimeout(()=>map.resize(), 310);
+  }
+}
+
+function resetInfoPanel(){
+  const titleEl = document.getElementById('infoTitle');
+  const tableEl = document.getElementById('infoTable');
+  const typeEl  = document.getElementById('infoTypeLine');
+  if (titleEl) titleEl.textContent = 'Click a building or boundary';
+  if (tableEl) tableEl.innerHTML = '';
+  if (typeEl) typeEl.textContent = 'Attributes from the selected feature will appear here.';
+}
+
+// hook UI buttons
+if (hamburgerBtn){
+  hamburgerBtn.addEventListener('click', toggleLeftPanel);
+}
+if (closeLeftPanelBtn){
+  closeLeftPanelBtn.addEventListener('click', closeLeftPanel);
+}
+if (closeRightPanelBtn){
+  closeRightPanelBtn.addEventListener('click', closeRightPanel);
+}
+
+// ESC key: close BOTH panels + clear info
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' || ev.key === 'Esc'){
+    closeLeftPanel();
+    closeRightPanel();
+    resetInfoPanel();
+  }
+});
+
+// ---------- 2D / 3D / Measure / Export ----------
+let measureActive = false;
+let measurePoints = [];
+
+const btn2D      = document.getElementById('btn2D');
+const btn3D      = document.getElementById('btn3D');
+const btnMeasure = document.getElementById('btnMeasure');
+const btnExport  = document.getElementById('btnExport');
+const measureInfoEl = document.getElementById('measureInfo');
+
+function set2DView(){
+  map.easeTo({
+    pitch: 0,
+    bearing: 0,
+    duration: 800
+  });
+
+  // turn off 3D extrusion in 2D view
+  if (map.getLayer('buildings-3d')) {
+    map.setPaintProperty('buildings-3d', 'fill-extrusion-height', 0);
+  }
+  if (map.getLayer('buildings-highlight')) {
+    map.setPaintProperty('buildings-highlight', 'fill-extrusion-height', 0);
+  }
+
+  if (btn2D) btn2D.classList.add('active');
+  if (btn3D) btn3D.classList.remove('active');
+}
+
+
+function set3DView(){
+  map.easeTo({
+    pitch: 60,
+    bearing: 40,
+    duration: 800
+  });
+
+  // restore 3D extrusion heights in 3D view
+  if (map.getLayer('buildings-3d')) {
+    map.setPaintProperty(
+      'buildings-3d',
+      'fill-extrusion-height',
+      ['*', buildingHeightExpression(), 3]
+    );
+  }
+  if (map.getLayer('buildings-highlight')) {
+    map.setPaintProperty(
+      'buildings-highlight',
+      'fill-extrusion-height',
+      ['*', buildingHeightExpression(), 3.2]
+    );
+  }
+
+  if (btn3D) btn3D.classList.add('active');
+  if (btn2D) btn2D.classList.remove('active');
+}
+
+
+function setMeasureActive(on){
+  measureActive = on;
+  measurePoints = [];
+  updateMeasureSource();
+  if (measureInfoEl) {
+    measureInfoEl.style.display = on ? 'block' : 'none';
+    measureInfoEl.textContent = on ? 'Click on map to start measuring' : '';
+  }
+  if (btnMeasure){
+    if (on) btnMeasure.classList.add('active');
+    else btnMeasure.classList.remove('active');
+  }
+}
+
+function toggleMeasure(){
+  setMeasureActive(!measureActive);
+}
+
+// update GeoJSON for measure line & points
+function updateMeasureSource(){
+  if (!map.getSource('measure-line') || !map.getSource('measure-points')) return;
+
+  const lineData = {
+    type: 'FeatureCollection',
+    features: measurePoints.length > 0 ? [{
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: measurePoints
+      }
+    }] : []
+  };
+
+  const pointFeatures = measurePoints.map(coord => ({
+    type: 'Feature',
+    geometry: { type:'Point', coordinates: coord }
+  }));
+  const pointsData = {
+    type: 'FeatureCollection',
+    features: pointFeatures
+  };
+
+  map.getSource('measure-line').setData(lineData);
+  map.getSource('measure-points').setData(pointsData);
+
+  if (measurePoints.length >= 2){
+    const line = turf.lineString(measurePoints);
+    const length = turf.length(line, { units:'kilometers' }); // km
+    const meters = length * 1000;
+    if (measureInfoEl){
+      measureInfoEl.textContent = meters < 1000
+        ? `Distance: ${meters.toFixed(1)} m`
+        : `Distance: ${(meters/1000).toFixed(2)} km`;
+    }
+  }
+}
+
+// handle click in measure mode
+function handleMeasureClick(lngLat){
+  measurePoints.push([lngLat.lng, lngLat.lat]);
+  updateMeasureSource();
+}
+
+// simple export to PNG (similar style to 7.html behaviour)
+// ---------- EXPORT: draw map canvas + render right panel onto canvas ----------
+function exportMapWithPanelPNG(){
+  try {
+    const panelEl = document.getElementById('rightPanel');
+    if (!panelEl) {
+      alert('Info panel not found.');
+      return;
+    }
+
+    const panelWasHidden = panelEl.classList.contains('rightPanel-hidden');
+
+    // ensure panel visible for capture (but we will render panel ourselves)
+    if (panelWasHidden) openRightPanel();
+
+    // wait for map to finish rendering
+    map.once('idle', () => {
+      try {
+        const mapCanvas = map.getCanvas();
+        const mapW = mapCanvas.width;
+        const mapH = mapCanvas.height;
+
+        // decide panel width (use actual panel width if visible, else default)
+        const panelDesiredWidth = Math.max(300, panelEl.offsetWidth || 360);
+
+        // create output canvas
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = mapW + panelDesiredWidth;
+        outCanvas.height = mapH;
+        const ctx = outCanvas.getContext('2d');
+
+        // white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+
+        // draw map
+        // if map canvas is tainted this may fail; try/catch below handles it
+        ctx.drawImage(mapCanvas, 0, 0, mapW, mapH);
+
+        // thin divider line
+        ctx.fillStyle = '#e6e6e6';
+        ctx.fillRect(mapW - 1, 0, 1, mapH);
+
+        // draw panel background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(mapW, 0, panelDesiredWidth, mapH);
+
+        // styles for text
+        const padding = 14;
+        const xLeft = mapW + padding;
+        const availableWidth = panelDesiredWidth - padding * 2;
+        let y = 18 + padding; // initial y
+
+        // Header: "Information"
+        ctx.font = '700 16px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = '#1e40af'; // header color similar to #2b6cb0
+        ctx.textAlign = 'center';
+        ctx.fillText('Information', mapW + panelDesiredWidth / 2, y);
+        y += 26;
+
+        // Sub-title / Layer name (if present)
+        const infoTitleEl = document.getElementById('infoTitle');
+        if (infoTitleEl && infoTitleEl.textContent && infoTitleEl.textContent.trim()){
+          ctx.font = '700 13px "Segoe UI", Arial, sans-serif';
+          ctx.fillStyle = '#0b2340';
+          ctx.textAlign = 'left';
+          ctx.fillText(infoTitleEl.textContent.trim(), xLeft, y);
+          y += 22;
+        }
+
+        // Draw rows from #infoTable
+        const tableEl = document.getElementById('infoTable');
+        if (tableEl) {
+          // Key column width (left) and value width (right)
+          const keyColWidth = Math.floor(availableWidth * 0.42);
+          const valColWidth = availableWidth - keyColWidth - 8;
+
+          const rows = Array.from(tableEl.querySelectorAll('tr'));
+          ctx.textAlign = 'left';
+
+          rows.forEach((tr) => {
+            const keyTd = tr.children[0];
+            const valTd = tr.children[1];
+            const key = keyTd ? keyTd.textContent.trim() : '';
+            const val = valTd ? valTd.textContent.trim() : '';
+
+            // key text (blue)
+            ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = '#2b6cb0';
+            // if key too long, wrap in key column (rare)
+            wrapText(ctx, key, xLeft, y, keyColWidth, 16);
+
+            // value text (black) - wrap in right column
+            ctx.font = '13px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = '#111111';
+            const startXVal = xLeft + keyColWidth + 8;
+            const lines = wrapTextLines(ctx, val, valColWidth);
+            // draw lines
+            for (let i = 0; i < lines.length; i++) {
+              ctx.fillText(lines[i], startXVal, y + (i * 16));
+            }
+
+            // increase y by max(linesCount, keyLines)*lineHeight + small gap
+            const keyLines = Math.max(1, Math.ceil(ctx.measureText(key).width / keyColWidth));
+            const linesCount = Math.max(1, lines.length);
+            const usedLines = Math.max(keyLines, linesCount);
+            y += usedLines * 16 + 8;
+
+            // avoid overflowing bottom - if close to bottom, stop
+            if (y > mapH - 30) {
+              // optional: write "..." to indicate overflow
+              ctx.font = '12px "Segoe UI", Arial, sans-serif';
+              ctx.fillStyle = '#666';
+              ctx.fillText('...', xLeft, mapH - 10);
+              return;
+            }
+          });
+        }
+
+        // Save output
+        const dataURL = outCanvas.toDataURL('image/png');
+        const a = document.createElement('a');
+
+        // construct filename from Villname or OwnerName (if present)
+        let filename = 'NMDC_Map_Export.png';
+        if (tableEl) {
+          const rows = Array.from(tableEl.querySelectorAll('tr'));
+          let vill = '', owner = '';
+          rows.forEach(r => {
+            const k = r.children[0] ? r.children[0].textContent.trim() : '';
+            const v = r.children[1] ? r.children[1].textContent.trim() : '';
+            if (/^Villname$/i.test(k) || /^VillName$/i.test(k)) vill = v;
+            if (/^OwnerName$/i.test(k)) owner = v;
+          });
+          if (vill) filename = `Map_${vill.replace(/\s+/g,'_')}.png`;
+          else if (owner) filename = `Map_${owner.replace(/\s+/g,'_')}.png`;
+        }
+
+        a.href = dataURL;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+      } catch (err) {
+        console.error('Export draw error:', err);
+        alert('Export failed: ' + (err.message || err));
+      } finally {
+        // restore panel hidden state if needed
+        if (panelWasHidden) {
+          setTimeout(()=>{ closeRightPanel(); }, 2000);
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('exportMapWithPanelPNG error:', err);
+    alert('Export failed: ' + (err.message || err));
+  }
+}
+
+// ---------- small helper functions for text wrapping ----------
+// draw text with wrapping and return number of lines drawn (but this function draws as it goes)
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const lines = wrapTextLines(ctx, text, maxWidth);
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, y + (i * lineHeight));
+  }
+  return lines.length;
+}
+
+// returns an array of lines for a given text and measured maxWidth
+function wrapTextLines(ctx, text, maxWidth) {
+  if (!text) return [''];
+  const words = text.split(/\s+/);
+  const lines = [];
+  let current = '';
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const test = (current ? current + ' ' + word : word);
+    const width = ctx.measureText(test).width;
+    if (width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+
 // URLs for your data
 const BUILDINGS_URL = 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Buildings.geojson';
 const BOUNDARY_URL  = 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/VillageBoundary.geojson';
 
 let buildingsData = null;
 let boundaryData  = null;
+
+// for highlight
+let selectedBuildingId = null;
 
 // helper fetch
 async function fetchJSON(url){
@@ -191,17 +776,19 @@ function buildingHeightExpression() {
   ];
 }
 
+
+
 // ---------- Fill right panel with ALL attributes ----------
 function fillInfoPanel(title, feature){
   const titleEl = document.getElementById('infoTitle');
   const tableEl = document.getElementById('infoTable');
   const typeEl  = document.getElementById('infoTypeLine');
 
-  titleEl.textContent = title || 'Information';
-  tableEl.innerHTML = '';
+  if (titleEl) titleEl.textContent = title || 'Information';
+  if (tableEl) tableEl.innerHTML = '';
 
   if (!feature || !feature.properties) {
-    typeEl.textContent = 'No feature selected.';
+    if (typeEl) typeEl.textContent = 'No feature selected.';
     return;
   }
 
@@ -218,10 +805,10 @@ function fillInfoPanel(title, feature){
     tv.textContent = (props[k] === null || typeof props[k] === 'undefined' || props[k] === '') ? 'N/A' : String(props[k]);
     tr.appendChild(tk);
     tr.appendChild(tv);
-    tableEl.appendChild(tr);
+    if (tableEl) tableEl.appendChild(tr);
   });
 
-  typeEl.textContent = `Layer: ${title}`;
+  if (typeEl) typeEl.textContent = `Layer: ${title}`;
 }
 
 // ---------- fit map to data ----------
@@ -328,27 +915,25 @@ map.on('load', async () => {
     map.addSource('osm', { type:'raster', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize:256 });
     map.addLayer({ id:'osm', type:'raster', source:'osm', paint:{ 'raster-opacity':1 } });
 
-map.addSource('satellite', {
-  type: 'raster',
-  tiles: [
-    'https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=VTyVRu9eUsVOXeBj5TqJ'
-  ],
-  tileSize: 256
-});
-map.addLayer({
-  id: 'satellite',
-  type: 'raster',
-  source: 'satellite',
-  layout: { visibility: 'none' },
-  paint: { 'raster-opacity': 1 }
-});
-
+    map.addSource('satellite', {
+      type: 'raster',
+      tiles: [
+        'https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=VTyVRu9eUsVOXeBj5TqJ'
+      ],
+      tileSize: 256
+    });
+    map.addLayer({
+      id: 'satellite',
+      type: 'raster',
+      source: 'satellite',
+      layout: { visibility: 'none' },
+      paint: { 'raster-opacity': 1 }
+    });
 
     // --- Bhuvan WMS LULC as raster tiles (visibility initially none) ---
     map.addSource('bhuvan-lulc', {
       type: 'raster',
       tiles: [
-        // using WMS GetMap template; server sometimes prefers 3857 - keep as is; opacity can be tuned
         'https://bhuvan-vec2.nrsc.gov.in/bhuvan/gwc/service/wms?' +
         'SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&' +
         'LAYERS=sisdp_phase2:SISDP_P2_LULC_10K_2016_2019_CG&' +
@@ -369,9 +954,8 @@ map.addLayer({
     map.addLayer({ id:'village-fill', type:'fill', source:'village-boundary', paint:{ 'fill-color':'#fff59d','fill-opacity':0 } });
     map.addLayer({ id:'village-outline', type:'line', source:'village-boundary', paint:{ 'line-color':'#f57f17','line-width':2.5 } });
 
-    // ---------- LULC CLIP MASK (robust) ----------
+    // ---------- LULC CLIP MASK ----------
     try {
-      // clean boundary (small buffer helps fix self-intersections in many datasets)
       let boundaryClean;
       try {
         boundaryClean = turf.buffer(boundaryData, 0.0001, { units: 'kilometers' });
@@ -380,13 +964,10 @@ map.addLayer({
         boundaryClean = boundaryData;
       }
 
-      // build mask (world minus village polygon)
       const lulcMaskGeoJSON = turf.mask(boundaryClean);
 
-      // add mask source and mask layer (put mask ABOVE the LULC but below outlines/buildings)
       map.addSource('lulc-mask', { type: 'geojson', data: lulcMaskGeoJSON });
 
-      // insert mask BEFORE village-outline so it sits above LULC but under the outline & other vectors
       map.addLayer({
         id: 'lulc-mask',
         type: 'fill',
@@ -394,7 +975,6 @@ map.addLayer({
         paint: { 'fill-color': '#f5f7fb', 'fill-opacity': 1 }
       }, 'village-outline');
 
-      // mask initially hidden (we'll toggle when bhuvan-lulc is active)
       map.setLayoutProperty('lulc-mask','visibility','none');
 
       console.log('LULC clip mask created.');
@@ -403,20 +983,66 @@ map.addLayer({
       alert('Could not create LULC clip mask: ' + (err.message||err));
     }
 
-    // buildings
-    map.addSource('buildings', { type:'geojson', data:buildingsData });
-map.addLayer({
-  id:'buildings-3d',
-  type:'fill-extrusion',
-  source:'buildings',
-  paint:{
-    'fill-extrusion-color':'#3da5ff',
-    // ⬇️ multiply by 3 for vertical exaggeration
-    'fill-extrusion-height': ['*', buildingHeightExpression(), 3],
-    'fill-extrusion-opacity':0.9
-  }
-});
+    // buildings (generateId so we can highlight by id)
+    map.addSource('buildings', { type:'geojson', data:buildingsData, generateId:true });
+    map.addLayer({
+      id:'buildings-3d',
+      type:'fill-extrusion',
+      source:'buildings',
+      paint:{
+        'fill-extrusion-color':'#3da5ff',
+        'fill-extrusion-height': ['*', buildingHeightExpression(), 3],
+        'fill-extrusion-opacity':0.9
+      }
+    });
 
+    // highlight layer for selected building (yellow fill, red border feel)
+    map.addLayer({
+      id:'buildings-highlight',
+      type:'fill-extrusion',
+      source:'buildings',
+      paint:{
+        'fill-extrusion-color':'#ffeb3b',    // yellow
+        'fill-extrusion-height':['*', buildingHeightExpression(), 3.2],
+        'fill-extrusion-opacity':1
+      },
+      filter:['==',['id'], -1] // nothing selected initially
+    });
+
+    // ---- Measure tool sources & layers ----
+    map.addSource('measure-line', {
+      type:'geojson',
+      data:{ type:'FeatureCollection', features:[] }
+    });
+    map.addSource('measure-points', {
+      type:'geojson',
+      data:{ type:'FeatureCollection', features:[] }
+    });
+
+    map.addLayer({
+      id:'measure-line-layer',
+      type:'line',
+      source:'measure-line',
+      paint:{
+        'line-color':'#1d4ed8',
+        'line-width':3
+      }
+    });
+
+    map.addLayer({
+      id:'measure-points-layer',
+      type:'circle',
+      source:'measure-points',
+      paint:{
+        'circle-radius':4,
+        'circle-color':'#dc2626',
+        'circle-stroke-color':'#ffffff',
+        'circle-stroke-width':1
+      }
+    });
+
+    // set default view mode button state (3D)
+    if (btn3D) btn3D.classList.add('active');
 
     // Fit map view
     fitToData();
@@ -431,18 +1057,60 @@ map.addLayer({
   }
 });
 
+// helper to update highlight filter
+function setHighlightedBuilding(feature){
+  if (!map.getLayer('buildings-highlight')) return;
+
+  if (!feature || typeof feature.id === 'undefined' || feature.layer.id !== 'buildings-3d'){
+    selectedBuildingId = null;
+    map.setFilter('buildings-highlight', ['==', ['id'], -1]);
+    return;
+  }
+  selectedBuildingId = feature.id;
+  map.setFilter('buildings-highlight', ['==', ['id'], selectedBuildingId]);
+}
+
 // ----------- Click behaviour -----------
 map.on('click', (e) => {
+  if (measureActive){
+    // measuring mode: add points instead of showing info
+    handleMeasureClick(e.lngLat);
+    return;
+  }
+
   const features = map.queryRenderedFeatures(e.point, { layers: ['buildings-3d','village-outline','village-fill'] });
-  if (!features.length) return;
+  if (!features.length) {
+    setHighlightedBuilding(null);
+    return;
+  }
+
   const f = features[0];
-  if (f.layer && f.layer.id === 'buildings-3d') fillInfoPanel('Buildings', f);
-  else fillInfoPanel('Village Boundary', f);
+  if (f.layer && f.layer.id === 'buildings-3d') {
+    fillInfoPanel('Buildings', f);
+    setHighlightedBuilding(f); // highlight clicked building
+  } else {
+    fillInfoPanel('Village Boundary', f);
+    setHighlightedBuilding(null); // remove building highlight
+  }
+
+  // When feature is clicked, ensure right panel is visible
+  openRightPanel();
 });
 
+// ----------- Cursor behaviour (like 7.html style) -----------
 map.on('mousemove', (e) => {
   const features = map.queryRenderedFeatures(e.point, { layers: ['buildings-3d','village-outline','village-fill'] });
-  map.getCanvas().style.cursor = features.length ? 'pointer' : '';
+
+  if (measureActive){
+    // measure mode: crosshair (+ symbol)
+    map.getCanvas().style.cursor = 'crosshair';
+  } else if (features.length){
+    // hovering select-able feature: hand pointer
+    map.getCanvas().style.cursor = 'pointer';
+  } else {
+    // normal map: default arrow
+    map.getCanvas().style.cursor = '';
+  }
 });
 
 // ----------- Layer panel UI -----------
@@ -451,7 +1119,7 @@ document.getElementById('btnLayers').addEventListener('click', () => {
   el.style.display = (el.style.display === 'block') ? 'none' : 'block';
 });
 
-// basemap toggle function (safe)
+// basemap toggle function
 function setBasemap(layerId) {
   const ids = ['osm','satellite','bhuvan-lulc'];
   ids.forEach(id => {
@@ -463,7 +1131,8 @@ function setBasemap(layerId) {
     map.setLayoutProperty('lulc-mask','visibility', visible);
   }
 }
-// attach radio listeners (defensive: wait for DOM)
+
+// attach radio listeners
 document.querySelectorAll('input[name="basemap"]').forEach(r => {
   r.addEventListener('change', () => { setBasemap(r.value); });
 });
@@ -472,6 +1141,7 @@ document.querySelectorAll('input[name="basemap"]').forEach(r => {
 document.getElementById('toggleBuildings').addEventListener('change', function(){
   const vis = this.checked ? 'visible' : 'none';
   if (map.getLayer('buildings-3d')) map.setLayoutProperty('buildings-3d','visibility',vis);
+  if (map.getLayer('buildings-highlight')) map.setLayoutProperty('buildings-highlight','visibility',vis);
 });
 
 // toggle boundary
@@ -480,6 +1150,33 @@ document.getElementById('toggleBoundary').addEventListener('change', function(){
   if (map.getLayer('village-fill')) map.setLayoutProperty('village-fill','visibility',vis);
   if (map.getLayer('village-outline')) map.setLayoutProperty('village-outline','visibility',vis);
 });
+
+// 2D / 3D buttons
+if (btn2D){
+  btn2D.addEventListener('click', () => {
+    set2DView();
+  });
+}
+if (btn3D){
+  btn3D.addEventListener('click', () => {
+    set3DView();
+  });
+}
+
+// Measure button
+if (btnMeasure){
+  btnMeasure.addEventListener('click', () => {
+    toggleMeasure();
+  });
+}
+
+// Export button
+if (btnExport){
+  btnExport.addEventListener('click', () => {
+    exportMapWithPanelPNG();
+  });
+}
+
 </script>
 </body>
 </html>
