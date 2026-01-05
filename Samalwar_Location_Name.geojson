@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "Plotboundary",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "OBJECTID": 1, "NAME": "PATEL PARA", "LAYER": "PATEL PARA" }, "geometry": { "type": "Point", "coordinates": [ 81.314338479139977, 18.606655985353292 ] } },
+{ "type": "Feature", "properties": { "OBJECTID": 2, "NAME": "VICHA PARA", "LAYER": "VICHA PARA" }, "geometry": { "type": "Point", "coordinates": [ 81.303851165921841, 18.602951253430959 ] } },
+{ "type": "Feature", "properties": { "OBJECTID": 3, "NAME": "AVGATA PARA", "LAYER": "AVGATA PARA" }, "geometry": { "type": "Point", "coordinates": [ 81.333072148181259, 18.585561871904371 ] } }
+]
+}
