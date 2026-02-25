@@ -1,1181 +1,5080 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>NMDC Dantewada — Buildings Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<title> Samalwar – Proposed Model Village Planning Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-<!-- MapLibre -->
-<link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet"/>
-<script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+<link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet"/>
+<script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-<!-- Turf (for bbox / area etc.) -->
-<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
 
-<!-- Chart.js for pie charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;width:100%;font-family:"Segoe UI",Arial,sans-serif;background:#f5f7fb;}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:"Segoe UI",Arial,sans-serif}
 
-/* Top header */
-header.site-header{
-  position:fixed;top:0;left:0;right:0;height:60px;
-  background:linear-gradient(90deg,#0d47a1,#1976d2);
-  color:#fff;display:flex;align-items:center;padding:0 16px;z-index:1000;
-  box-shadow:0 2px 6px rgba(0,0,0,0.18);
-}
-
-.site-header h1{font-size:18px;font-weight:800;margin-left:6px;}
-.site-header .nmdc-logo{height:40px; margin-right:10px;}
-
-/* Layout */
-#page-body{position:absolute;top:60px;left:0;right:0;bottom:0;display:flex;}
-
-/* Map */
-#map{flex:1 1 auto;position:relative;}
-
-/* Right info panel */
-#rightPanel{
-  width:360px;min-width:260px;background:#ffffff;border-left:1px solid rgba(0,0,0,0.08);
-  box-shadow:-2px 0 16px rgba(0,0,0,0.05);padding:10px 14px;overflow:auto;
-  position:relative;
-  transition:width 0.3s ease, padding 0.3s ease, border-left 0.3s ease;
-}
-#rightPanel h2{margin:0 0 8px 0;color:#2b6cb0;text-align:center;}
-
-/* Right panel hidden */
-.rightPanel-hidden{
-  width:0 !important;
-  min-width:0 !important;
-  padding:0 !important;
-  border-left:0 !important;
-  overflow:hidden !important;
-}
-
-/* info table */
-#infoTitle{font-weight:700;margin:8px 0 4px 0;color:#0b2340;}
-.infoTable{width:100%;border-collapse:collapse;font-size:13px;}
-.infoTable td{padding:4px 3px;vertical-align:top;}
-.infoTable td.key{width:40%;color:#2b6cb0;font-weight:600;padding-right:6px;}
-.infoTable td.value{color:#111;}
-.small-muted{display:block;margin-top:6px;font-size:12px;color:rgba(0,0,0,0.6);}
-
-/* LEFT analysis panel */
-#leftPanel{
-  position:absolute;
-  top:12px;
-  left:8px;
-  bottom:12px;
-  width:320px;
-  max-width:340px;
-  background:#ffffff;
-  border-radius:12px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.25);
-  padding:10px 12px;
-  z-index:1400;
-  transform:translateX(-110%);
-  transition:transform 0.3s ease;
+/* ===== NMDC HEADER WITH TOOLBAR ===== */
+.app-header{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  height:54px;
+  background:#0f4c81;   /* ✅ NMDC BLUE */
+  color:#ffffff;
   display:flex;
-  flex-direction:column;
-}
-#leftPanel.visible{
-  transform:translateX(0);
-}
-#leftPanel h2{
-  margin:0 0 8px 0;
-  color:#2b6cb0;
-  text-align:center;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  z-index:3000;
+  box-shadow:0 2px 8px rgba(0,0,0,0.25);
 }
 
-/* analysis section (inside left panel) */
-#analysisSection{
-  margin-bottom:10px;
-  padding:8px;
-  border-radius:8px;
-  background:linear-gradient(135deg,rgba(43,108,176,0.06),rgba(43,108,176,0.02));
-  border:1px solid rgba(0,0,0,0.05);
-}
-#analysisSection label{
-  display:block;
-  font-size:13px;
-  font-weight:700;
-  color:#0b2340;
-  margin-bottom:4px;
-}
-#analysisField{
-  width:100%;
-  padding:6px 8px;
-  border-radius:6px;
-  border:1px solid rgba(0,0,0,0.12);
-  font-size:13px;
-  margin-bottom:6px;
-}
-#analysisStats{
-  font-size:12px;
-  margin-top:4px;
-  color:#334155;
-}
-.chart-container{
-  position:relative;
-  width:100%;
-  height:220px;
+.header-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
 
-/* Hamburger button on left side */
-.hamburger-map-btn{
-  position:absolute;
-  top:80px;
-  left:8px;
-  z-index:1500;
-  font-size:20px;
-  background:#ffffff;
-  color:#b71c1c;
-  border:none;
-  border-radius:8px;
-  padding:6px 10px;
-  cursor:pointer;
-  font-weight:800;
-  box-shadow:0 4px 10px rgba(0,0,0,0.18);
-}
-.hamburger-map-btn:hover{
-  background:#f1f5f9;
-}
-.hamburger-map-btn:focus{
-  outline:3px solid rgba(43,108,176,0.3);
+.header-left img{
+  height:40px;
 }
 
-/* Close buttons */
-.close-left-btn,
-.close-right-btn{
-  position:absolute;
-  top:6px;
-  right:8px;
-  z-index:1501;
-  border:none;
-  background:#ffffff;
-  color:#d32f2f;
+.header-left span{
   font-size:18px;
-  border-radius:6px;
-  padding:2px 8px;
-  cursor:pointer;
-  box-shadow:0 3px 8px rgba(0,0,0,0.16);
-}
-.close-left-btn:hover,
-.close-right-btn:hover{
-  background:#fef2f2;
+  font-weight:600;
 }
 
-/* Top center toolbar */
-#topCenterToolbar{
-  position:absolute;
-  top:8px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:1100;
-}
-.toolbar-card{
-  background:#fff;
-  border-radius:10px;
-  padding:6px 8px;
+/* RIGHT TOOLBAR */
+.header-toolbar{
   display:flex;
   gap:6px;
   align-items:center;
-  box-shadow:0 8px 24px rgba(0,0,0,0.18);
-  border:1px solid rgba(0,0,0,0.06);
 }
-.tc-btn{
+
+.header-toolbar select{
+  padding:6px 8px;
+  border-radius:6px;
+  border:1px solid #cbd5f5;
+  font-size:12px;
+}
+
+.header-toolbar button{
+  padding:6px 14px;
   border:none;
-  padding:6px 10px;
-  border-radius:8px;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:600;
   cursor:pointer;
-  font-size:13px;
-  font-weight:700;
-  background:#f5f5f5;
 }
-.tc-btn.primary{background:linear-gradient(135deg,#ffd700,#ffed4e);}
-.tc-btn.white{background:#fff;}
-.tc-btn.active{
-  background:#2b6cb0;
+
+.header-toolbar .search-btn{
+  background:#2563eb;
   color:#ffffff;
 }
 
-/* Layer list dropdown */
-#layerList{
-  position:absolute;
-  top:46px;
-  z-index:1100;
-  display:none;
-  background:#ffffff;
-  padding:8px 10px;
-  border-radius:10px;
-  border:1px solid rgba(0,0,0,0.08);
-  box-shadow:0 10px 30px rgba(0,0,0,0.18);
-  right:50%;
-  transform:translateX(50%);
-  font-size:13px;
+.header-toolbar .reset-btn{
+  background:#ef4444;
+  color:#ffffff;
 }
-#layerList label{
+
+/* MOBILE */
+@media(max-width:900px){
+  .header-toolbar{
+    display:none; /* hide toolbar on mobile */
+  }
+}
+
+.app-header img{height:40px;margin-right:12px}
+.app-header span{font-size:18px;font-weight:600}
+
+.main {
+  position: absolute;
+  top: 60px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr;   /* ✅ FULL MAP BY DEFAULT */
+  transition: grid-template-columns 0.3s ease;
+}
+
+/* WHEN DASHBOARD IS OPEN */
+.main.dashboard-open {
+  grid-template-columns: 1fr 360px; /* map + right panel */
+}
+
+
+
+.dashboard {
+  background: #ffffff;
+  border-left: 1px solid #ddd;
+  padding: 14px;
+  overflow-y: auto;
+  display: none;              /* 🔥 HIDDEN DEFAULT */
+}
+
+/* SHOW ONLY WHEN OPEN */
+.main.dashboard-open .dashboard {
+  display: block;
+}
+
+#map-container,
+#map {
+  width: 100%;
+  height: 100%;
+}
+.main,
+#map-container {
+  overflow: visible !important;
+}
+
+
+/* KPI */
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin-bottom:14px
+}
+.kpi{
+  background:#0f4c81;color:#fff;
+  padding:12px;border-radius:6px;
+  text-align:center
+}
+.kpi span{font-size:12px;opacity:.85}
+.kpi h2{font-size:22px}
+
+#categoryButtons button{
+  padding:8px;
+  border:none;
+  border-radius:6px;
+  background:#e5e7eb;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+}
+#categoryButtons button.active{
+  background:#0f4c81;
+  color:#fff;
+}
+
+
+/* CHART */
+.chart-box{
+  background:#f8fafc;
+  padding:10px;border-radius:6px;
+  margin-bottom:14px
+}
+.chart-box h4{
+  font-size:13px;
+  margin-bottom:6px;
+  color:#0f4c81
+}
+.chart-box {
+  width: 100%;
+}
+
+.chart-box canvas {
+  width: 100% !important;
+  height: 260px !important;
+}
+
+
+@media(max-width:900px){
+  .chart-box canvas{
+    max-height:220px;
+  }
+}
+
+
+#hamburger{
+  position: fixed;          /* 🔥 FIXED TO SCREEN */
+  top: 80px;                /* below header */
+  left: 14px;
+  width: 44px;
+  height: 44px;
+  background: #0f4c81;
+  color: #fff;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 10000;           /* 🔥 ABOVE DASHBOARD */
+  box-shadow: 0 4px 10px rgba(0,0,0,.25);
+}
+#hamburger{
+  display: flex !important;   /* ✅ FORCE SHOW */
+  visibility: visible !important;
+}
+
+
+/* LAYER PANEL */
+#layerPanel{
+  position:fixed;top:125px;left:14px;
+  background:#fff;padding:12px 14px;
+  font-size:13px;border-radius:6px;
+  box-shadow:0 4px 10px rgba(0,0,0,.25);
+  display:none;z-index:5000;min-width:220px
+}
+#layerPanel label{display:block;margin-bottom:6px}
+
+/* MOBILE */
+@media(max-width:900px){
+
+  .main{
+    grid-template-columns:1fr;
+  }
+
+  .dashboard{
+    position:fixed;
+    bottom:-100%;
+    left:0;
+    right:0;
+    height:70vh;
+    background:#ffffff;
+    z-index:5000;
+    border-top-left-radius:14px;
+    border-top-right-radius:14px;
+    box-shadow:0 -6px 20px rgba(0,0,0,0.25);
+    transition:bottom 0.3s ease;
+    overflow-y:auto;
+  }
+
+  .dashboard.open{
+    bottom:0;
+  }
+}
+
+
+/* ===== DASHBOARD BUTTON ===== */
+#mobileDashBtn{
+  position: fixed;
+  top: 72px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #0f4c81, #08365c);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  transition: transform 0.2s ease;
+}
+
+#mobileDashBtn:hover{
+  transform: scale(1.06);
+}
+
+/* ===== MINI BAR CHART ICON ===== */
+.chart-bars{
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 22px;
+}
+
+.chart-bars .bar{
+  width: 6px;
+  border-radius: 2px;
+}
+
+/* individual bars */
+.chart-bars .red{
+  height: 12px;
+  background: #ef4444;   /* red */
+}
+
+.chart-bars .yellow{
+  height: 18px;
+  background: #facc15;   /* yellow */
+}
+
+.chart-bars .green{
+  height: 22px;
+  background: #22c55e;   /* green */
+}
+
+
+
+
+@media(max-width:900px){
+  #mobileDashBtn{
+    display:flex;
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    width:56px;
+    height:56px;
+    background:#0f4c81;
+    color:#ffffff;
+    font-size:24px;
+    border-radius:50%;
+    align-items:center;
+    justify-content:center;
+    z-index:7000;
+    box-shadow:0 6px 16px rgba(0,0,0,0.35);
+    cursor:pointer;
+  }
+}
+
+.kpis {
+  display: none;
+}
+
+.executive-summary {
+  background:#0f4c81;
+  color:#ffffff;
+}
+
+
+
+
+
+
+.executive-summary h4{
+  font-size:13px;
+  margin-bottom:6px;
+  font-weight:600;
+  color:#ffffff;
+}
+
+
+/* Paragraph text */
+.executive-summary p {
+  font-size: 11.5px;      /* 🔽 reduced */
+  line-height: 1.45;      /* compact */
+  margin-bottom: 6px;
+  color: #ffffff !important;
+}
+
+
+
+.map-widgets{
+  position:absolute;
+  bottom:20px;
+  left:20px;
+  display:flex;
+  gap:12px;
+  z-index:4000;
+}
+
+.map-widget{
+  background:rgba(255,255,255,0.95);
+  border-radius:8px;
+  padding:10px;
+  width:260px;
+  height:230px;                 /* ✅ REDUCED */
+  box-shadow:0 6px 18px rgba(0,0,0,0.25);
+  overflow: visible;             /* ✅ IMPORTANT */
+}
+
+
+
+.map-widget h4{
+  font-size:12px;
+  margin-bottom:6px;
+  color:#0f4c81;
+}
+
+.map-widget canvas {
+  width: 100% !important;
+  height: 160px !important;
+}
+/* ================= MAP LEGEND ================= */
+
+
+#mapLegend h4{
+  margin-bottom:6px;
+  font-size:13px;
+  color:#0f4c81;
+}
+
+
+
+/* DOT SYMBOLS */
+.dot{
+  width:10px;
+  height:10px;
+  display:inline-block;
+  border-radius:50%;
+  margin-right:6px;
+}
+.social{background:#2563eb}
+.transport{background:#f97316}
+.nrm{background:#16a34a}
+.water{background:#0ea5e9}
+.energy{background:#eab308}
+.economic{background:#7c3aed}
+
+/* ===== EXISTING ASSETS MARKER ICONS IN LEGEND ===== */
+
+.legend-marker{
+  width:18px;
+  height:18px;
+  display:inline-block;
+  margin-right:6px;
+  background-size:contain;
+  background-repeat:no-repeat;
+  background-position:center;
+  vertical-align:middle;
+}
+
+/* 🔵 WORKING */
+.working-marker{
+  background-image:url('https://img.icons8.com/ios-filled/50/2563eb/marker.png');
+}
+
+/* 🔴 NOT WORKING */
+.notworking-marker{
+  background-image:url('https://img.icons8.com/ios-filled/50/ef4444/marker.png');
+}
+
+
+
+/* LINE SYMBOLS */
+.line{
+  width:18px;
+  height:3px;
+  display:inline-block;
+  margin-right:6px;
+}
+.bt{background:#7c3aed}
+.cc{background:#22c55e}
+.drain{background:#0284c7}
+.boundary{background:#5b3a0e}
+
+/* MAP CONTAINER */
+#map-container{
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* MAP */
+#map{
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================
+   EXECUTIVE SUMMARY – FINAL (VERTICAL, COLLAPSIBLE, CMD SAFE)
+   ========================================================= */
+
+#execSummary{
+  position:absolute;
+  bottom:20px;
+  left:20px;
+  color:#ffffff;
+  z-index:5000;
+}
+
+
+/* collapse like legend */
+#execSummary.collapsed .exec-content{
+  display:none;
+}
+
+#execSummary .legend-header{
+  background:linear-gradient(
+    135deg,
+    #0f4c81 0%,
+    #08365c 100%
+  );
+}
+
+
+.exec-content{
+  padding:8px 10px;
+  max-height:calc(70vh - 44px);  /* 🔥 subtract header height */
+  overflow-y:auto;              /* 🔥 ENABLE SCROLL */
+}
+
+
+.exec-content::-webkit-scrollbar{
+  width:6px;
+}
+
+.exec-content::-webkit-scrollbar-thumb{
+  background:rgba(255,255,255,0.35);
+  border-radius:6px;
+}
+
+.exec-content::-webkit-scrollbar-track{
+  background:transparent;
+}
+
+
+.exec-text{
+  font-size:11px;
+  line-height:1.45;
+  text-align:justify;
+  margin-bottom:6px;
+}
+
+
+
+
+
+/* mobile behavior */
+@media(max-width:900px){
+  #execSummary{
+    position:fixed;
+    bottom:90px;
+    left:14px;
+    width:260px;
+  }
+}
+
+/* =========================================================
+   LEGEND – SAFE COLLAPSE (TEXT + SYMBOLS VISIBLE)
+   ========================================================= */
+
+#mapLegend{
+  position:absolute;
+  bottom:20px;
+  right:20px;
+  font-size:12px;
+  z-index:9999;
+}
+
+
+
+.legend-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  height:44px;                 /* 🔥 SAME HEIGHT */
+  padding:0 14px;
+
+  background:linear-gradient(
+    135deg,
+    #0f4c81 0%,
+    #08365c 100%
+  );
+
+  color:#ffffff;
+  font-size:13px;
+  font-weight:600;
+
+  border-top-left-radius:10px;
+  border-top-right-radius:10px;
+
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,0.15);
+}
+
+
+
+.legend-header button{
+  width:26px;
+  height:26px;
+
+  background:rgba(255,255,255,0.15);
+  color:#ffffff;
+
+  border:1px solid rgba(255,255,255,0.35);
+  border-radius:6px;
+
+  font-size:16px;
+  font-weight:700;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+
+.legend-header button:hover{
+  background:rgba(255,255,255,0.25);
+}
+
+#execSummary .legend-header{
+  height:44px;                 /* 🔥 EXACT MATCH */
+  padding:0 14px;
+}
+
+#execSummary .legend-header span{
+  color:#fde047;        /* 🔥 CMD YELLOW */
+  font-weight:700;
+  letter-spacing:0.3px;
+}
+
+#mapLegend .legend-header span{
+  color:#ffffff;
+}
+
+
+.legend-content{
+  padding:8px 10px;
+  max-height:60vh;            /* 🔥 scroll only content */
+  overflow-y:auto;
+}
+
+
+/* legend groups */
+.legend-group{
+  margin-bottom:8px;
+  padding-bottom:8px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+/* collapse ONLY content */
+#mapLegend.collapsed .legend-content{
+  display:none;
+}
+
+/* mobile legend */
+@media(max-width:900px){
+  #mapLegend{
+    bottom:80px;
+    right:10px;
+    width:200px;
+    font-size:11px;
+  }
+}
+
+/* 🔥 FINAL GRID SAFETY FIX */
+.dashboard{
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#kpiAssetsCard,
+#kpiTypesCard {
+  display: none !important;
+}
+
+/* ===== FULL WIDTH KPI (WHEN SINGLE) ===== */
+
+.kpis.single-kpi {
+  grid-template-columns: 1fr;   /* 👈 ONE COLUMN */
+}
+
+.kpis.single-kpi .kpi {
+  width: 100%;
+}
+
+.legend-canvas{
+  width:32px;        /* 🔥 bigger & readable */
+  height:32px;
+  flex-shrink:0;
+  image-rendering: crisp-edges;
+}
+
+/* ===== LEGEND TWO COLUMN LAYOUT ===== */
+.legend-two-main{
+  display:grid;
+  grid-template-columns: 1.2fr 1fr; /* Existing | Others */
+  gap:12px;
+}
+
+/* column boxes */
+.legend-col{
+  font-size:12px;
+}
+
+
+
+/* two items per row inside existing assets */
+.legend-two-col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px 10px;
+}
+
+.legend-item{
   display:flex;
   align-items:center;
   gap:6px;
-  margin:4px 0;
-}
-#layerList input[type=checkbox],
-#layerList input[type=radio]{
-  width:16px;height:16px;
 }
 
-/* Measure info label */
-#measureInfo{
+
+
+/* ===== EXISTING ASSET CATEGORY ===== */
+.legend-cat{
+  margin-top:6px;
+  margin-bottom:4px;
+  font-weight:600;
+  font-size:11px;
+  color:#0f172a;
+  border-left:3px solid #0f4c81;
+  padding-left:6px;
+}
+
+/* grid for icons inside a category */
+.legend-two-col{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4px 8px;
+  margin-bottom:6px;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+}
+
+/* KPI TITLE – SAME AS CHART TITLE */
+.kpi-title{
+  font-size:13px;
+  margin-bottom:6px;
+  color:#0f4c81;
+  font-weight:600;
+}
+
+/* ===== COMMON MAP BOX BASE (LEGEND + EXEC SUMMARY) ===== */
+/* ===== COMMON MAP BOX BASE (NO BACKGROUND) ===== */
+.map-box{
+  width:320px;
+  max-height:70vh;
+  border-radius:10px;
+  box-shadow:0 10px 26px rgba(0,0,0,0.28);
+  overflow:hidden;
+}
+
+#mapLegend{
+  background:#ffffff;
+}
+
+
+
+/* ===== TWO COLUMN LAYER PANEL ===== */
+
+.layer-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* 🔥 TWO COLUMNS */
+  gap: 14px;
+}
+
+.layer-col{
+  font-size: 12px;
+}
+
+.layer-col b{
+  display: block;
+  margin-bottom: 6px;
+  color: #0f4c81;
+}
+
+.layer-col label{
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* action buttons */
+.layer-actions{
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 8px 0;
+}
+
+.layer-actions button{
+  flex: 1;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.layer-actions button:first-child{
+  background: #16a34a;
+  color: #fff;
+}
+
+.layer-actions button:last-child{
+  background: #ef4444;
+  color: #fff;
+}
+
+/* reduce panel height */
+#layerPanel{
+  max-height: 65vh;
+  overflow-y: auto;
+}
+@media(max-width: 900px){
+  .layer-grid{
+    grid-template-columns: 1fr;   /* stack vertically */
+  }
+}
+
+/* ===== EXECUTIVE SUMMARY – CMD NUMBER STYLE ===== */
+
+.exec-numbered{
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+
+.exec-numbered li{
+  position:relative;
+  display:flex;
+  gap:14px;
+  padding:10px 12px;
+  margin-bottom:10px;
+  background:rgba(255,255,255,0.06);
+  border-radius:3px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+/* NUMBER BADGE */
+.exec-num{
+  flex-shrink:0;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#fde047,#facc15);
+  color:#0f172a;
+  font-size:12px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.35),
+    inset 0 0 0 2px rgba(15,23,42,0.15);
+}
+
+/* TEXT BODY */
+.exec-body{
+  font-size:12px;
+  line-height:1.55;
+  color:#ffffff;
+}
+
+/* HIGHLIGHT IMPORTANT NUMBERS INSIDE TEXT */
+.exec-body b{
+  color:#fde047;
+  font-weight:800;
+}
+
+/* VERTICAL FLOW LINE (EXCEPT LAST ITEM) */
+.exec-numbered li:not(:last-child)::after{
+  content:'';
   position:absolute;
-  bottom:12px;
+  left:33px;
+  top:54px;
+  width:2px;
+  height:calc(100% - 54px);
+  background:linear-gradient(
+    to bottom,
+    rgba(253,224,71,0.6),
+    rgba(253,224,71,0.05)
+  );
+}
+
+
+
+/* ===== EXECUTIVE SUMMARY – FINAL TEXT RULES ===== */
+
+/* Base text */
+#execSummary .exec-body{
+  color:#ffffff !important;
+  font-size:12px;
+  line-height:1.6;
+}
+
+/* Asset names (bold but WHITE) */
+#execSummary .exec-body b{
+  color:#ffffff !important;   /* keep white */
+  font-weight:700;            /* bold */
+}
+
+/* Numbers ONLY */
+#execSummary .num-inline{
+  color:#fde047 !important;        /* 🟡 yellow */
+  font-size:13px;                 /* bigger */
+  font-weight:900;
+  padding:2px 6px;
+  border-radius:6px;
+    margin:0 2px;
+  white-space:nowrap;
+}
+
+/* ===== EXECUTIVE SUMMARY – CSR SUB LIST ===== */
+
+.exec-sublist{
+  margin-top:6px;
+  padding-left:6px;
+  list-style:disc;
+}
+
+.exec-sublist li{
+  margin-bottom:4px;
+  font-size:12px;
+  line-height:1.4;
+  color:#ffffff;              /* keep text white */
+}
+
+.exec-sublist b{
+  font-weight:700;            /* asset names bold */
+  color:#ffffff;              /* SAME COLOR as text */
+}
+
+/* ===== EXECUTIVE SUMMARY TEXT JUSTIFY FIX ===== */
+
+.exec-body{
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* CSR sub list text justify */
+.exec-sublist li{
+  text-align: justify;
+  text-justify: inter-word;
+}
+.exec-numbered li:last-child{
+  background: rgba(255,255,255,0.08);
+  border-left: 4px solid #fde047;
+}
+@media(max-width:900px){
+  .dashboard{
+    display:block !important;
+  }
+}
+
+/* ===============================
+   TOP MIDDLE MAP TOOLBAR
+   =============================== */
+#topFilterBar{
+  position:absolute;
+  top:12px;                       /* below header */
   left:50%;
   transform:translateX(-50%);
-  z-index:1200;
+  display:flex;
+  gap:6px;
+  padding:10px 12px;
   background:#ffffff;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:12px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.18);
-  display:none;
+  border-radius:12px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  z-index:6000;
+  align-items:center;
+  flex-wrap:wrap;
 }
 
-/* MapLibre attribution bottom-right styling */
-.maplibregl-ctrl-bottom-right{right:10px !important;bottom:10px !important;}
-.maplibregl-ctrl-attrib{
-  background:#1e3a8a !important;
-  color:#fff !important;
-  border-radius:6px !important;
-  padding:6px 10px !important;
-  font-size:11px !important;
+/* dropdowns */
+#topFilterBar select{
+  min-width:140px;
+  padding:6px 8px;
+  border-radius:6px;
+  border:1px solid #cbd5f5;
+  font-size:12px;
 }
-.maplibregl-ctrl-top-right{top:60px !important;}
+
+/* buttons */
+#topFilterBar button{
+  padding:6px 14px;
+  border:none;
+  border-radius:6px;
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.search-btn{
+  background:#2563eb;
+  color:#ffffff;
+}
+
+.reset-btn{
+  background:#ef4444;
+  color:#ffffff;
+}
+
+/* 📱 MOBILE FIX */
+@media(max-width:900px){
+  #topFilterBar{
+    top:70px;
+    width:95%;
+    justify-content:center;
+  }
+
+  #topFilterBar select{
+    min-width:120px;
+  }
+}
+
+/* CSR legend polish */
+.legend-group img {
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 0.5px;
+}
+
+
+
 </style>
 </head>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const execBodies = document.querySelectorAll("#execSummary .exec-body");
+
+  execBodies.forEach(el => {
+    el.innerHTML = el.innerHTML.replace(
+      /(\d{1,3}(?:,\d{3})*(?:\.\d+)?)/g,
+      '<span class="num-inline">$1</span>'
+    );
+  });
+
+});
+</script>
+
 <body>
-<header class="site-header">
-  <!-- NMDC logo placed left of the title -->
-  <img class="nmdc-logo"
-       src="https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/NMDCLOGO.png"
-       alt="NMDC Logo" />
-  <h1>NMDC Model Village Household Survey</h1>
-</header>
-
-<div id="page-body">
-  <div id="map">
-    <!-- LEFT QUICK ANALYSIS PANEL -->
-    <div id="leftPanel">
-      <button id="closeLeftPanelBtn" class="close-left-btn" title="Close analysis panel">✖</button>
-      <h2>Quick Analysis</h2>
-
-      <div id="analysisSection">
-        <label for="analysisField">Select variable for analysis</label>
-        <select id="analysisField">
-          <option value="Floors">Floors</option>
-          <option value="Caste">Caste</option>
-          <option value="Vulnerabil">Vulnerable</option>
-          <option value="Familytype">Familytype</option>
-          <option value="Totalmembe">Total members</option>
-          <option value="disability">Disability</option>
-          <option value="Migration">Migration</option>
-          <option value="Education">Education</option>
-          <option value="SchoolDrop">SchoolDrop</option>
-          <option value="Smartphone">Smartphone</option>
-          <option value="Internet">Internet</option>
-          <option value="Livelihood">Livelihood</option>
-          <option value="Landowners">Landowners</option>
-        </select>
-
-        <div class="chart-container">
-          <canvas id="pieChart"></canvas>
-        </div>
-
-        <div id="analysisStats">
-          <span id="statTotal"></span>
-          <span id="statTop"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- HAMBURGER TO OPEN LEFT PANEL -->
-    <button id="hamburgerBtn" class="hamburger-map-btn" title="Toggle analysis panel">☰</button>
-
-    <!-- top center tools -->
-    <div id="topCenterToolbar">
-      <div class="toolbar-card">
-        <button id="btn2D" class="tc-btn white" title="Switch to 2D view">2D</button>
-        <button id="btn3D" class="tc-btn white" title="Switch to 3D view">3D</button>
-        <button id="btnMeasure" class="tc-btn white" title="Measure distance">Measure</button>
-        <button id="btnExport" class="tc-btn white" title="Export map as PNG">Export</button>
-        <button id="btnLayers" class="tc-btn white" title="Show / hide layers panel">Layers</button>
-      </div>
-    </div>
-
-    <!-- Layer selector -->
-    <div id="layerList">
-      <div style="font-weight:700;margin-bottom:4px;">Base map</div>
-      <label><input type="radio" name="basemap" value="osm" checked> OpenStreetMap</label>
-      <label><input type="radio" name="basemap" value="satellite"> Satellite imagery</label>
-      <label><input type="radio" name="basemap" value="bhuvan-lulc"> LULC (Bhuvan)</label>
-
-      <hr style="margin:8px 0;border:none;border-top:1px solid rgba(0,0,0,0.1);" />
-      <div style="font-weight:700;margin-bottom:4px;">Data layers</div>
-      <label><input type="checkbox" id="toggleBuildings" checked> Buildings</label>
-      <label><input type="checkbox" id="toggleBoundary" checked> Village boundary</label>
-    </div>
-
-    <!-- Measure info -->
-    <div id="measureInfo">Click on map to start measuring</div>
+<div id="mobileDashBtn" title="Dashboard">
+  <div class="chart-bars">
+    <span class="bar red"></span>
+    <span class="bar yellow"></span>
+    <span class="bar green"></span>
   </div>
+</div>
+<div id="hamburger" title="Layers">☰</div>
+<div id="layerPanel">
 
-  <!-- RIGHT PANEL: INFORMATION ONLY -->
-  <div id="rightPanel" class="rightPanel-hidden">
-    <button id="closeRightPanelBtn" class="close-right-btn" title="Close information panel">✖</button>
-    <h2>Information</h2>
-    <div id="infoTitle">Click a building or boundary</div>
-    <table class="infoTable" id="infoTable"></table>
-    <span class="small-muted" id="infoTypeLine">Attributes from the selected feature will appear here.</span>
+  <div class="layer-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="layer-col left-col">
+
+      <b>Basemap</b>
+      <label><input type="checkbox" onchange="toggleSatellite(this)"> Satellite</label>
+      <label><input type="checkbox" onchange="toggleAllDroneImages(this)"> Drone Images</label>
+
+      <hr>
+
+      <b>Layers</b>
+      <label><input type="checkbox" checked onchange="toggle('boundary',this)"> Village Boundary</label>
+      <label><input type="checkbox" checked onchange="toggleProposedAssets(this)"> Proposed Assets</label>
+      <label><input type="checkbox" checked onchange="toggle('roads-bt',this)"> Proposed BT Roads</label>
+      <label><input type="checkbox" checked onchange="toggle('roads-cc',this)"> Proposed CC Roads</label>
+      <label><input type="checkbox" checked onchange="toggle('wall-3d',this)"> Boundary Wall (3D)</label>
+      <label><input type="checkbox" onchange="toggle('drain',this)"> Natural Drainage Network</label>
+      <label><input type="checkbox" checked onchange="toggle('para',this)"> Habitation / Para</label>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="layer-col right-col">
+
+      <b>Existing Assets</b>
+
+      <div class="layer-actions">
+        <button onclick="selectAllExistingAssets()">Select All</button>
+        <button onclick="clearAllExistingAssets()">Clear All</button>
+      </div>
+
+      <label><input type="checkbox" onchange="toggleExistingAssetCategory('Social & Educational Infrastructure', this)"> Social & Educational</label>
+      <label><input type="checkbox" onchange="toggleExistingAssetCategory('Religious & Cultural Assets', this)"> Religious & Cultural</label>
+      <label><input type="checkbox" onchange="toggleExistingAssetCategory('Drinking Water Infrastructure', this)"> Drinking Water</label>
+      <label><input type="checkbox" onchange="toggleExistingAssetCategory('Energy & Utilities', this)"> Energy & Utilities</label>
+      <label><input type="checkbox" onchange="toggleExistingAssetCategory('Institutional & Public Services', this)"> Institutional & Services</label>
+
+  <!-- 🔥 CSR WORKS (INSIDE EXISTING ASSETS) -->
+  <hr>
+
+  <b>Existing CSR Works</b>
+
+  <label>
+    <input type="checkbox" checked onchange="toggleAllCSR(this)">
+    Completed CSR Works-NMDC
+  </label>
+
+  <hr style="margin:6px 0; opacity:0.3">
+ <b>Landuse</b>
+<label>
+  <input type="checkbox" onchange="toggleLanduse(this)">
+  Presnt Land use
+</label>
+
+
+</div> <!-- ✅ END right-col -->
+
+
+
   </div>
 </div>
 
+
+<header class="app-header">
+
+
+  <!-- LEFT : LOGO + TITLE -->
+  <div class="header-left">
+    <img src="https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/NMDCLOGO.png">
+    <span>Samalwar – Proposed Model Village Planning Dashboard</span>
+  </div>
+
+  <!-- RIGHT : TOOLBAR -->
+  <div class="header-toolbar">
+
+    <select id="stateSelect">
+      <option value="">Select State</option>
+    </select>
+
+
+    <select id="blockSelect">
+      <option value="">Select Block</option>
+    </select>
+
+    <select id="villageSelect">
+      <option value="">Select Village</option>
+    </select>
+
+    <button class="search-btn">Search</button>
+    <button class="reset-btn">Reset</button>
+
+  </div>
+</header>
+<div class="main">
+<div id="map-container">
+
+  <div id="map"></div>
+  
+  <div id="csrNarrative" style="
+  position:absolute;
+  top:90px;
+  right:20px;
+  width:360px;
+  background:rgba(15,76,129,0.95);
+  color:#fff;
+  padding:14px;
+  border-radius:10px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.35);
+  font-size:12.5px;
+  line-height:1.5;
+  display:none;
+  z-index:6000;
+">
+  <b style="color:#fde047;">Existing CSR Works – NMDC</b><br><br>
+
+  Existing CSR Works implemented by NMDC include development of key community
+  and transport infrastructure assets such as an <b>Anganwadi Centre with Kitchen
+  at Patel Para</b>, an <b>Anganwadi Kitchen and Store at Vichha Para</b>,
+  construction of a <b>CC Road at Sarpanch Para</b>, and an
+  <b>Indian Overseas Bank–cum–Community Hall at Patel Para</b>.
+  These interventions have significantly strengthened social amenities
+  and local connectivity within the village.
+</div>
+
+  <!-- EXECUTIVE SUMMARY (BOTTOM LEFT) -->
+<div id="execSummary" class="map-box executive-summary collapsed">
+    <div class="legend-header">
+      <span>Executive Summary</span>
+      <button id="execToggle">+</button>
+    </div>
+
+    <div class="exec-content">
+<ol class="exec-list exec-numbered">
+
+  <li>
+    <span class="exec-num">01</span>
+    <div class="exec-body">
+      The Model Village Development Plan for <b>Samalwar</b> proposes a total of
+      <b>99 development assets</b> across Natural Resource Management, Transport,
+      Drinking Water, Social Infrastructure, Energy & Lighting, and Economic Infrastructure.
+    </div>
+  </li>
+
+  <li>
+    <span class="exec-num">02</span>
+    <div class="exec-body">
+      <b>Natural Resource Management (NRM)</b> includes
+      <b>24 WHS</b>, <b>10 Check Dams</b>, <b>2 LBCD</b>, and
+      <b>3 Pond Renovation works</b>, aimed at groundwater recharge and climate resilience.
+    </div>
+  </li>
+
+  <li>
+    <span class="exec-num">03</span>
+    <div class="exec-body">
+      <b>Drinking Water Infrastructure</b> strengthened through
+      <b>20 Solar Water Tanks</b> ensuring reliable and renewable water supply.
+    </div>
+  </li>
+
+  <li>
+    <span class="exec-num">04</span>
+    <div class="exec-body">
+      <b>Transport Infrastructure</b> includes
+      <b>2 Bridges</b>, <b>2 Culverts</b>,
+      <b>15.84 km BT Roads</b> and <b>4.71 km CC Roads</b>
+      (total <b>20.55 km</b>).
+    </div>
+  </li>
+
+  <li>
+    <span class="exec-num">05</span>
+    <div class="exec-body">
+      <b>Social Infrastructure</b> covers
+      <b>4 Anganwadis</b>, <b>1 Community Hall</b>, <b>1 Mandap</b>,
+      <b>4 Handwashing Platforms</b>, <b>3 Toilets</b>,
+      and <b>0.69 km Boundary Walls</b>.
+    </div>
+  </li>
+
+  <li>
+    <span class="exec-num">06</span>
+    <div class="exec-body">
+      <b>Energy & Lighting</b> interventions include
+      <b>9 High Mast Lights</b> and street lighting in
+      <b>3 habitation locations</b>.
+    </div>
+  </li>
+
+<li>
+  <span class="exec-num">07</span>
+  <div class="exec-body">
+    <b>Economic Infrastructure</b> supported through
+    <b>2 Market Complexes</b>.
+  </div>
+</li>
+
+<li>
+  <span class="exec-num">08</span>
+  <div class="exec-body">
+    Overall interventions benefit
+    <b>1,220 people</b> across <b>330 households</b>,
+    aligned with <b>NMDC CSR objectives</b>.
+  </div>
+</li>
+
+<!-- 🔥 PASTE HERE -->
+<li>
+  <span class="exec-num">09</span>
+  <div class="exec-body">
+    <b>Existing CSR Works</b> implemented by NMDC include development of key
+    community and transport infrastructure assets such as an
+    <b>Anganwadi Centre with Kitchen at Patel Para</b>,
+    an <b>Anganwadi Kitchen and Store at Vichha Para</b>,
+    construction of a <b>CC Road Constructed by NMDC at Sarpanch Para</b>, and an
+    <b>Indian Overseas Bank–cum–Community Hall at Patel Para</b>.
+    These interventions have significantly strengthened social amenities
+    and local connectivity within the village.
+  </div>
+</li>
+
+
+
+</ol>
+
+
+
+
+    </div>
+  </div>
+
+  <!-- MAP LEGEND (BOTTOM RIGHT) -->
+<div id="mapLegend" class="map-box collapsed">
+    <div class="legend-header">
+      <span>Legend</span>
+      <button id="legendToggle">+</button>
+    </div>
+
+    <div class="legend-content">
+	
+	<!-- ===============================
+     CSR – NMDC (LEGEND)
+     =============================== -->
+<div class="legend-group">
+
+  <b style="display:flex;align-items:center;gap:8px;">
+    <img
+      src="https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/NMDCLOGO.png"
+      style="width:22px;height:22px;"
+      alt="NMDC Logo">
+    CSR – Completed Works (NMDC)
+  </b>
+
+
+
+</div>
+
+      <div class="legend-group">
+        <b>Proposed Assets</b>
+        <div><span class="dot social"></span> Social Infrastructure</div>
+        <div><span class="dot transport"></span> Transport Infrastructure</div>
+        <div><span class="dot nrm"></span> Natural Resource Management</div>
+        <div><span class="dot water"></span> Drinking Water</div>
+        <div><span class="dot energy"></span> Energy & Lighting</div>
+        <div><span class="dot economic"></span> Economic Infrastructure</div>
+      
+
+<div class="legend-col">
+
+  <b>Existing Assets</b>
+  <!-- ================= SOCIAL & EDUCATIONAL ================= -->
+<div class="legend-cat">Social & Educational Infrastructure</div>
+<div class="legend-two-col">
+  <div class="legend-item">
+    <canvas id="lg-anganwadi" width="36" height="36" class="legend-canvas"></canvas>
+    Anganwadi Building
+  </div>
+
+  <div class="legend-item">
+    <canvas id="lg-school" width="36" height="36" class="legend-canvas"></canvas>
+    School Building
+  </div>
+
+  <div class="legend-item">
+    <canvas id="lg-library" width="36" height="36" class="legend-canvas"></canvas>
+    Library Building
+  </div>
+
+
+</div>
+
+
+  <!-- ================= DRINKING WATER ================= -->
+  <div class="legend-cat">Drinking Water Infrastructure</div>
+  <div class="legend-two-col">
+    <div class="legend-item">
+      <canvas id="lg-hand-working" class="legend-canvas" width="36" height="36"></canvas>
+      Hand Pump (Working)
+    </div>
+    <div class="legend-item">
+      <canvas id="lg-hand-not" width="36" height="36" class="legend-canvas"></canvas>
+      Hand Pump (Not Working)
+    </div>
+    <div class="legend-item">
+      <canvas id="lg-solar" width="36" height="36" class="legend-canvas"></canvas>
+      Solar Water Tank
+    </div>
+  </div>
+
+  <!-- ================= ENERGY & UTILITIES ================= -->
+  <div class="legend-cat">Energy & Utilities</div>
+  <div class="legend-two-col">
+    <div class="legend-item">
+      <canvas id="lg-street-working" width="36" height="36" class="legend-canvas"></canvas>
+      Street Light (Working)
+    </div>
+    <div class="legend-item">
+      <canvas id="lg-street-not" width="36" height="36" class="legend-canvas"></canvas>
+      Street Light (Not Working)
+    </div>
+    <div class="legend-item">
+      <canvas id="lg-transformer" width="36" height="36" class="legend-canvas"></canvas>
+      Transformer
+    </div>
+  </div>
+
+  <!-- ================= INSTITUTIONAL & SERVICES ================= -->
+  <div class="legend-cat">Institutional & Public Services</div>
+  <div class="legend-two-col">
+    <div class="legend-item">
+      <canvas id="lg-pds" width="36" height="36" class="legend-canvas"></canvas>
+      PDS
+    </div>
+    <div class="legend-item">
+      <canvas id="lg-panchayat" width="36" height="36" class="legend-canvas"></canvas>
+      Panchayat
+    </div>
+    <div class="legend-item">
+      <canvas id="lg-bank" width="36" height="36" class="legend-canvas"></canvas>
+      Bank
+    </div>
+  </div>
+
+  <!-- ================= RELIGIOUS & CULTURAL ================= -->
+  <div class="legend-cat">Religious & Cultural Assets</div>
+  <div class="legend-two-col">
+    <div class="legend-item">
+      <canvas id="lg-temple" width="36" height="36" class="legend-canvas"></canvas>
+      Temple / Deva Gudi
+    </div>
+  </div>
+
+</div>
+
+
+
+      </div>
+
+      <div class="legend-group">
+        <b>Linear Assets</b>
+        <div><span class="line bt"></span> BT Road</div>
+        <div><span class="line cc"></span> CC Road</div>
+        <div><span class="line drain"></span> Drain</div>
+      </div>
+
+      <div class="legend-group">
+        <b>Boundary</b>
+        <div><span class="line boundary"></span> Village Boundary</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+  <div class="dashboard">
+  
+<div class="chart-box">
+  <h4>Infrastructure Distribution</h4>
+  <canvas id="assetChart"></canvas>
+</div>
+
+<!-- KPI HEADER (SAME STYLE AS CHART BOX) -->
+<div id="kpiHeader" class="chart-box" style="display:none;">
+  <h4>Infrastructure Distribution</h4>
+</div>
+
+
+
+
+<div class="kpis">
+  <div class="kpi" id="kpiAssetsCard">
+    <span>Proposed Assets</span>
+    <h2 id="kpiAssets">–</h2>
+  </div>
+
+  <div class="kpi" id="kpiBTCard">
+    <span>Proposed BT Road Length (km)</span>
+    <h2 id="kpiBT">–</h2>
+  </div>
+
+  <div class="kpi" id="kpiCCCard">
+    <span>Proposed CC Road With Drain Length (km)</span>
+    <h2 id="kpiCC">–</h2>
+  </div>
+  
+  <div class="kpi" id="kpiBoundaryCard">
+  <span>Boundary Wall Length (km)</span>
+  <h2 id="kpiBoundary">–</h2>
+</div>
+
+
+  <div class="kpi" id="kpiTypesCard">
+    <span>Proposed Asset Categories</span>
+    <h2 id="kpiTypes">–</h2>
+  </div>
+  
+  
+
+</div>
+
+
+
+<!-- ✅ CSR KPIs (SEPARATE) -->
+<div id="csrKpis" style="display:none; margin-top:10px;">
+
+  <div class="kpi" style="background:#16a34a;">
+    <span>Completed CSR Works</span>
+    <h2 id="csrCompleted">0</h2>
+  </div>
+
+  <div class="kpi" style="background:#dc2626;">
+    <span>Not Started CSR Works</span>
+    <h2 id="csrNotStarted">0</h2>
+  </div>
+
+</div>
+
+
+	
+	<div class="chart-box">
+  <h4>Infrastructure Categories</h4>
+
+  <div id="categoryButtons" style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">
+<button data-category="Social Infrastructure"
+        onclick="toggleCategory('Social Infrastructure')">Social</button>
+
+<button data-category="Transport Infrastructure"
+        onclick="toggleCategory('Transport Infrastructure')">Transport</button>
+
+<button data-category="Natural Resource Management"
+        onclick="toggleCategory('Natural Resource Management')">NRM</button>
+
+<button data-category="Drinking Water Infrastructure"
+        onclick="toggleCategory('Drinking Water Infrastructure')">Drinking Water</button>
+
+<button data-category="Energy & Lighting"
+        onclick="toggleCategory('Energy & Lighting')">Energy</button>
+
+<button data-category="Economic Infrastructure"
+        onclick="toggleCategory('Economic Infrastructure')">Economic</button>
+
+<button class="road-btn" onclick="toggleRoad('BT', this)">BT Roads</button>
+<button class="road-btn" onclick="toggleRoad('CC', this)">CC Roads With Drain</button>
+<button class="road-btn" onclick="toggleBoundaryWall(this)">
+  Boundary Wall
+</button>
+<button onclick="showCSRWorks()">Existing CSR Works</button>
+
+
+
+
+		<button onclick="resetAllFilters()"
+        style="margin-bottom:6px;padding:6px;border:none;border-radius:6px;
+               background:#ef4444;color:#fff;font-size:12px;font-weight:600;">
+  Reset All
+</button>
+<button onclick="exportTable()"
+        style="margin-bottom:6px;padding:6px;border:none;border-radius:6px;
+               background:#16a34a;color:#fff;font-size:12px;font-weight:600;">
+  Export CSV
+</button>
+
+
+  </div>
+</div>
+<div class="chart-box" id="assetTableBox">
+  <h4>Asset List</h4>
+  <div style="max-height:220px;overflow:auto;">
+    <table border="1" width="100%" cellpadding="4" style="font-size:11px;border-collapse:collapse;">
+      <thead style="background:#f1f5f9;">
+        <tr>
+    <th>Sl. No</th>
+    <th>Asset Name</th>
+    <th>Type</th>
+    <th>Category</th>
+        </tr>
+      </thead>
+      <tbody id="assetTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== CSR TABLE (CSV ONLY) ===== -->
+<div class="chart-box" id="csrTableBox" style="display:none;">
+  <h4>NMDC CSR Works (as per CSV)</h4>
+
+  <div style="max-height:220px;overflow:auto;">
+    <table border="1" width="100%" cellpadding="4"
+           style="font-size:11px;border-collapse:collapse;">
+      <thead style="background:#fef3c7;">
+        <tr>
+          <th>Sl No</th>
+          <th>NMDC CSR - Activity description</th>
+          <th>Work Status</th>
+          <th>Civil Works / Financial Assistance</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody id="csrTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+<!-- FULL LAYER CONTROL -->
+
+
+
+
+
+
+</div>
+
 <script>
-// ----------- Simple logger -----------
-function log(msg){ console.log(msg); }
 
-// ----------- Map init -----------
-const map = new maplibregl.Map({
-  container: 'map',
-  style: { version: 8, sources: {}, layers: [] },
-  center: [81.263533, 18.633673],
-  zoom: 17,
-  pitch: 45,
-  bearing: 0,
-  attributionControl: false
-});
-map.addControl(new maplibregl.NavigationControl(), 'top-right');
-map.addControl(new maplibregl.AttributionControl({ compact:false, customAttribution: 'Designed by: WOSCA,Keonjhar,Odisha' }), 'bottom-right');
 
-// ---------- Panels + buttons ----------
-const leftPanelEl  = document.getElementById('leftPanel');
-const rightPanelEl = document.getElementById('rightPanel');
-const hamburgerBtn = document.getElementById('hamburgerBtn');
-const closeLeftPanelBtn  = document.getElementById('closeLeftPanelBtn');
-const closeRightPanelBtn = document.getElementById('closeRightPanelBtn');
+const ALL_MAP_LAYERS = {
+  assets: ['points', 'asset-labels'],
+  roads: ['roads-bt', 'roads-cc'],
+  drain: ['drain'],
+  wall: ['wall-3d'],
+  boundary: ['boundary'],
+  para: ['para']
+};
 
-function openLeftPanel(){
-  if(!leftPanelEl) return;
-  leftPanelEl.classList.add('visible');
-  if(map && map.resize){
-    setTimeout(()=>map.resize(), 310);
+
+// CATEGORY MAPPING (MUST BE GLOBAL)
+const infraCategoryMap = {
+
+  "ANGANWADI BUILDING": "Social Infrastructure",
+  "HANDWASHING PLATFORM": "Social Infrastructure",
+"MULTILINGUAL AIDS": "Social Infrastructure",
+"TOILET REFURBISHING": "Social Infrastructure",
+  "COMMUNITY HALL": "Social Infrastructure",
+  "MANDAP": "Social Infrastructure",
+  "DOME SHED": "Social Infrastructure",
+  "TOILETS": "Social Infrastructure",
+
+  "BRIDGE": "Transport Infrastructure",
+  "CULVERT": "Transport Infrastructure",
+
+  "CHECKDAM": "Natural Resource Management",
+  "POND RENNOVATION": "Natural Resource Management",
+  "WHS": "Natural Resource Management",
+  "LBCD": "Natural Resource Management",
+
+  "SOLAR WATERTANK": "Drinking Water Infrastructure",
+
+  "STREETLIGHTS": "Energy & Lighting",
+  "HIGH MUST LIGHT": "Energy & Lighting",
+
+  "MARKET COMPLEX": "Economic Infrastructure"
+};
+
+
+const ALL_INFRA_CATEGORIES = [
+  "Social Infrastructure",
+  "Transport Infrastructure",
+  "Natural Resource Management",
+  "Drinking Water Infrastructure",
+  "Energy & Lighting",
+  "Economic Infrastructure"
+];
+
+const EXISTING_ASSET_CATEGORIES = {
+  "Social & Educational Infrastructure": false,
+  "Religious & Cultural Assets": false,
+  "Drinking Water Infrastructure": false,
+  "Energy & Utilities": false,
+  "Institutional & Public Services": false
+};
+
+/* ===============================
+   LANDUSE COLOR DEFINITIONS
+   =============================== */
+const LANDUSE_COLORS = {
+  "WATER BODY": "#0ea5e9",           // blue
+  "RIVER": "#0284c7",                // darker blue
+
+  "LOW LAND-CULTIVATION": "#7dd3fc", // 🔵 light blue
+  "UPLAND-CULTIVATION": "#facc15",   // 🟡 yellow
+
+  "SCRUB LAND": "#d6d3d1",           // grey
+  "VILLAGE FOREST": "#14532d",       // dark green
+  "SETTLEMENT": "#ef4444"            // red
+};
+
+
+
+let infraChart = null;
+let allAssetsData = null;
+let activeCategory = null;
+let allRoadsData = null;
+let currentTableData = [];
+let assetsLoaded = false;
+let roadsLoaded = false;
+let activeRoadType = null; // 'BT' | 'CC' | null
+let mobileInfraChart = null;
+let donutMode = 'percent'; // 'percent' | 'count'
+let csrTableData = [];
+let csrCompletedCount = 0;
+let csrNotStartedCount = 0;
+
+
+const CATEGORY_ASSET_MAP = {
+  "Social Infrastructure": [
+    "ANGANWADI BUILDING",
+    "HANDWASHING PLATFORM",
+    "MULTILINGUAL AIDS",
+    "TOILET REFURBISHING",
+    "COMMUNITY HALL",
+    "MANDAP",
+    "DOME SHED",
+    "TOILETS"
+  ],
+  "Transport Infrastructure": [
+    "BRIDGE",
+    "CULVERT"
+  ],
+  "Natural Resource Management": [
+    "CHECKDAM",
+    "POND RENNOVATION",
+    "WHS",
+    "LBCD"
+  ],
+  "Drinking Water Infrastructure": [
+    "SOLAR WATERTANK"
+  ],
+  "Energy & Lighting": [
+    "STREETLIGHTS",
+    "HIGH MUST LIGHT"
+  ],
+  "Economic Infrastructure": [
+    "MARKET COMPLEX"
+  ]
+};
+
+
+
+/* ===== EXISTING ASSETS : FINAL CATEGORY MAP ===== */
+
+const EXISTING_ASSET_CATEGORY_MAP = {
+  "Social & Educational Infrastructure": [
+    "ANGANWADI",
+    "SCHOOL",
+    "LIBRARY",
+    "COMMUNITY"
+  ],
+
+  "Religious & Cultural Assets": [
+    "DEVA GUDI",
+    "TEMPLE"
+  ],
+
+  "Drinking Water Infrastructure": [
+    "SOLAR WATER TANK",
+    "WATER TANK",
+    "TUBE WELL"
+  ],
+
+  "Energy & Utilities": [
+    "SREET LIGHT",
+    "TRANSFORMER",
+    "TELOPHONE TOWER"
+  ],
+
+  "Institutional & Public Services": [
+    "PDS",
+    "PANCHAYAT",
+    "BANK"
+  ]
+};
+
+const CSR_LAYERS = [
+  'csr-buildings-3d',
+  'csr-ccroad-3d',
+  'csr-labels'
+];
+
+const CSR_FLY_ASSETS = [
+  {
+    title: 'Indian Overseas Bank – Patel Para',
+    center: [81.3139771558, 18.6058387257],
+    image: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/bank.jpeg'
+  },
+  {
+    title: 'Anganwadi Centre – Patel Para',
+    center: [81.312659257, 18.6066494816],
+    image: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/anganwadi.jpeg'
+  },
+  {
+    title: 'Anganwadi Kitchen – Vichha Para',
+    center: [81.3053881561, 18.6036578765],
+    image: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/kitchen.jpeg'
+  },
+  {
+    title: 'CC Road – Sarpanch Para',
+    center: [81.3153714383, 18.6054242084],
+    image: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/ccroad.jpeg'
   }
-}
-function closeLeftPanel(){
-  if(!leftPanelEl) return;
-  leftPanelEl.classList.remove('visible');
-  if(map && map.resize){
-    setTimeout(()=>map.resize(), 310);
-  }
-}
-function toggleLeftPanel(){
-  if(!leftPanelEl) return;
-  if(leftPanelEl.classList.contains('visible')) closeLeftPanel();
-  else openLeftPanel();
+];
+
+function toggleAllCSR(cb) {
+  const visibility = cb.checked ? 'visible' : 'none';
+
+  CSR_LAYERS.forEach(layerId => {
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, 'visibility', visibility);
+    }
+  });
 }
 
-function openRightPanel(){
-  if(!rightPanelEl) return;
-  rightPanelEl.classList.remove('rightPanel-hidden');
-  if(map && map.resize){
-    setTimeout(()=>map.resize(), 310);
-  }
-}
-function closeRightPanel(){
-  if(!rightPanelEl) return;
-  rightPanelEl.classList.add('rightPanel-hidden');
-  if(map && map.resize){
-    setTimeout(()=>map.resize(), 310);
-  }
-}
+function addCSRPopup(layerId) {
 
-function resetInfoPanel(){
-  const titleEl = document.getElementById('infoTitle');
-  const tableEl = document.getElementById('infoTable');
-  const typeEl  = document.getElementById('infoTypeLine');
-  if (titleEl) titleEl.textContent = 'Click a building or boundary';
-  if (tableEl) tableEl.innerHTML = '';
-  if (typeEl) typeEl.textContent = 'Attributes from the selected feature will appear here.';
-}
+  map.on('click', layerId, (e) => {
 
-// hook UI buttons
-if (hamburgerBtn){
-  hamburgerBtn.addEventListener('click', toggleLeftPanel);
-}
-if (closeLeftPanelBtn){
-  closeLeftPanelBtn.addEventListener('click', closeLeftPanel);
-}
-if (closeRightPanelBtn){
-  closeRightPanelBtn.addEventListener('click', closeRightPanel);
-}
+    const feature = e.features[0];
 
-// ESC key: close BOTH panels + clear info
-document.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape' || ev.key === 'Esc'){
-    closeLeftPanel();
-    closeRightPanel();
-    resetInfoPanel();
-  }
-});
+    // 🔥 ADD TO HIGHLIGHT SOURCE
+    map.getSource('feature-highlight').setData({
+      type: 'FeatureCollection',
+      features: [feature]
+    });
 
-// ---------- 2D / 3D / Measure / Export ----------
-let measureActive = false;
-let measurePoints = [];
-
-const btn2D      = document.getElementById('btn2D');
-const btn3D      = document.getElementById('btn3D');
-const btnMeasure = document.getElementById('btnMeasure');
-const btnExport  = document.getElementById('btnExport');
-const measureInfoEl = document.getElementById('measureInfo');
-
-function set2DView(){
-  map.easeTo({
-    pitch: 0,
-    bearing: 0,
-    duration: 800
+    new maplibregl.Popup({ offset: 10 })
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <div style="font-size:13px;">
+          <b>${feature.properties.NAME}</b><br>
+          Category: ${feature.properties.LAYER}
+        </div>
+      `)
+      .addTo(map);
   });
 
-  // turn off 3D extrusion in 2D view
-  if (map.getLayer('buildings-3d')) {
-    map.setPaintProperty('buildings-3d', 'fill-extrusion-height', 0);
-  }
-  if (map.getLayer('buildings-highlight')) {
-    map.setPaintProperty('buildings-highlight', 'fill-extrusion-height', 0);
-  }
-
-  if (btn2D) btn2D.classList.add('active');
-  if (btn3D) btn3D.classList.remove('active');
-}
-
-
-function set3DView(){
-  map.easeTo({
-    pitch: 60,
-    bearing: 40,
-    duration: 800
-  });
-
-  // restore 3D extrusion heights in 3D view
-  if (map.getLayer('buildings-3d')) {
-    map.setPaintProperty(
-      'buildings-3d',
-      'fill-extrusion-height',
-      ['*', buildingHeightExpression(), 3]
-    );
-  }
-  if (map.getLayer('buildings-highlight')) {
-    map.setPaintProperty(
-      'buildings-highlight',
-      'fill-extrusion-height',
-      ['*', buildingHeightExpression(), 3.2]
-    );
-  }
-
-  if (btn3D) btn3D.classList.add('active');
-  if (btn2D) btn2D.classList.remove('active');
-}
-
-
-function setMeasureActive(on){
-  measureActive = on;
-  measurePoints = [];
-  updateMeasureSource();
-  if (measureInfoEl) {
-    measureInfoEl.style.display = on ? 'block' : 'none';
-    measureInfoEl.textContent = on ? 'Click on map to start measuring' : '';
-  }
-  if (btnMeasure){
-    if (on) btnMeasure.classList.add('active');
-    else btnMeasure.classList.remove('active');
-  }
-}
-
-function toggleMeasure(){
-  setMeasureActive(!measureActive);
-}
-
-// update GeoJSON for measure line & points
-function updateMeasureSource(){
-  if (!map.getSource('measure-line') || !map.getSource('measure-points')) return;
-
-  const lineData = {
-    type: 'FeatureCollection',
-    features: measurePoints.length > 0 ? [{
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: measurePoints
-      }
-    }] : []
-  };
-
-  const pointFeatures = measurePoints.map(coord => ({
-    type: 'Feature',
-    geometry: { type:'Point', coordinates: coord }
-  }));
-  const pointsData = {
-    type: 'FeatureCollection',
-    features: pointFeatures
-  };
-
-  map.getSource('measure-line').setData(lineData);
-  map.getSource('measure-points').setData(pointsData);
-
-  if (measurePoints.length >= 2){
-    const line = turf.lineString(measurePoints);
-    const length = turf.length(line, { units:'kilometers' }); // km
-    const meters = length * 1000;
-    if (measureInfoEl){
-      measureInfoEl.textContent = meters < 1000
-        ? `Distance: ${meters.toFixed(1)} m`
-        : `Distance: ${(meters/1000).toFixed(2)} km`;
-    }
-  }
-}
-
-// handle click in measure mode
-function handleMeasureClick(lngLat){
-  measurePoints.push([lngLat.lng, lngLat.lat]);
-  updateMeasureSource();
-}
-
-// simple export to PNG (similar style to 7.html behaviour)
-// ---------- EXPORT: draw map canvas + render right panel onto canvas ----------
-function exportMapWithPanelPNG(){
-  try {
-    const panelEl = document.getElementById('rightPanel');
-    if (!panelEl) {
-      alert('Info panel not found.');
-      return;
-    }
-
-    const panelWasHidden = panelEl.classList.contains('rightPanel-hidden');
-
-    // ensure panel visible for capture (but we will render panel ourselves)
-    if (panelWasHidden) openRightPanel();
-
-    // wait for map to finish rendering
-    map.once('idle', () => {
-      try {
-        const mapCanvas = map.getCanvas();
-        const mapW = mapCanvas.width;
-        const mapH = mapCanvas.height;
-
-        // decide panel width (use actual panel width if visible, else default)
-        const panelDesiredWidth = Math.max(300, panelEl.offsetWidth || 360);
-
-        // create output canvas
-        const outCanvas = document.createElement('canvas');
-        outCanvas.width = mapW + panelDesiredWidth;
-        outCanvas.height = mapH;
-        const ctx = outCanvas.getContext('2d');
-
-        // white background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, outCanvas.width, outCanvas.height);
-
-        // draw map
-        // if map canvas is tainted this may fail; try/catch below handles it
-        ctx.drawImage(mapCanvas, 0, 0, mapW, mapH);
-
-        // thin divider line
-        ctx.fillStyle = '#e6e6e6';
-        ctx.fillRect(mapW - 1, 0, 1, mapH);
-
-        // draw panel background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(mapW, 0, panelDesiredWidth, mapH);
-
-        // styles for text
-        const padding = 14;
-        const xLeft = mapW + padding;
-        const availableWidth = panelDesiredWidth - padding * 2;
-        let y = 18 + padding; // initial y
-
-        // Header: "Information"
-        ctx.font = '700 16px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = '#1e40af'; // header color similar to #2b6cb0
-        ctx.textAlign = 'center';
-        ctx.fillText('Information', mapW + panelDesiredWidth / 2, y);
-        y += 26;
-
-        // Sub-title / Layer name (if present)
-        const infoTitleEl = document.getElementById('infoTitle');
-        if (infoTitleEl && infoTitleEl.textContent && infoTitleEl.textContent.trim()){
-          ctx.font = '700 13px "Segoe UI", Arial, sans-serif';
-          ctx.fillStyle = '#0b2340';
-          ctx.textAlign = 'left';
-          ctx.fillText(infoTitleEl.textContent.trim(), xLeft, y);
-          y += 22;
-        }
-
-        // Draw rows from #infoTable
-        const tableEl = document.getElementById('infoTable');
-        if (tableEl) {
-          // Key column width (left) and value width (right)
-          const keyColWidth = Math.floor(availableWidth * 0.42);
-          const valColWidth = availableWidth - keyColWidth - 8;
-
-          const rows = Array.from(tableEl.querySelectorAll('tr'));
-          ctx.textAlign = 'left';
-
-          rows.forEach((tr) => {
-            const keyTd = tr.children[0];
-            const valTd = tr.children[1];
-            const key = keyTd ? keyTd.textContent.trim() : '';
-            const val = valTd ? valTd.textContent.trim() : '';
-
-            // key text (blue)
-            ctx.font = '600 12px "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = '#2b6cb0';
-            // if key too long, wrap in key column (rare)
-            wrapText(ctx, key, xLeft, y, keyColWidth, 16);
-
-            // value text (black) - wrap in right column
-            ctx.font = '13px "Segoe UI", Arial, sans-serif';
-            ctx.fillStyle = '#111111';
-            const startXVal = xLeft + keyColWidth + 8;
-            const lines = wrapTextLines(ctx, val, valColWidth);
-            // draw lines
-            for (let i = 0; i < lines.length; i++) {
-              ctx.fillText(lines[i], startXVal, y + (i * 16));
-            }
-
-            // increase y by max(linesCount, keyLines)*lineHeight + small gap
-            const keyLines = Math.max(1, Math.ceil(ctx.measureText(key).width / keyColWidth));
-            const linesCount = Math.max(1, lines.length);
-            const usedLines = Math.max(keyLines, linesCount);
-            y += usedLines * 16 + 8;
-
-            // avoid overflowing bottom - if close to bottom, stop
-            if (y > mapH - 30) {
-              // optional: write "..." to indicate overflow
-              ctx.font = '12px "Segoe UI", Arial, sans-serif';
-              ctx.fillStyle = '#666';
-              ctx.fillText('...', xLeft, mapH - 10);
-              return;
-            }
-          });
-        }
-
-        // Save output
-        const dataURL = outCanvas.toDataURL('image/png');
-        const a = document.createElement('a');
-
-        // construct filename from Villname or OwnerName (if present)
-        let filename = 'NMDC_Map_Export.png';
-        if (tableEl) {
-          const rows = Array.from(tableEl.querySelectorAll('tr'));
-          let vill = '', owner = '';
-          rows.forEach(r => {
-            const k = r.children[0] ? r.children[0].textContent.trim() : '';
-            const v = r.children[1] ? r.children[1].textContent.trim() : '';
-            if (/^Villname$/i.test(k) || /^VillName$/i.test(k)) vill = v;
-            if (/^OwnerName$/i.test(k)) owner = v;
-          });
-          if (vill) filename = `Map_${vill.replace(/\s+/g,'_')}.png`;
-          else if (owner) filename = `Map_${owner.replace(/\s+/g,'_')}.png`;
-        }
-
-        a.href = dataURL;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-      } catch (err) {
-        console.error('Export draw error:', err);
-        alert('Export failed: ' + (err.message || err));
-      } finally {
-        // restore panel hidden state if needed
-        if (panelWasHidden) {
-          setTimeout(()=>{ closeRightPanel(); }, 2000);
-        }
-      }
-    });
-
-  } catch (err) {
-    console.error('exportMapWithPanelPNG error:', err);
-    alert('Export failed: ' + (err.message || err));
-  }
-}
-
-// ---------- small helper functions for text wrapping ----------
-// draw text with wrapping and return number of lines drawn (but this function draws as it goes)
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const lines = wrapTextLines(ctx, text, maxWidth);
-  for (let i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], x, y + (i * lineHeight));
-  }
-  return lines.length;
-}
-
-// returns an array of lines for a given text and measured maxWidth
-function wrapTextLines(ctx, text, maxWidth) {
-  if (!text) return [''];
-  const words = text.split(/\s+/);
-  const lines = [];
-  let current = '';
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const test = (current ? current + ' ' + word : word);
-    const width = ctx.measureText(test).width;
-    if (width > maxWidth && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = test;
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
-}
-
-
-// URLs for your data
-const BUILDINGS_URL = 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Buildings.geojson';
-const BOUNDARY_URL  = 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/VillageBoundary.geojson';
-
-let buildingsData = null;
-let boundaryData  = null;
-
-// for highlight
-let selectedBuildingId = null;
-
-// helper fetch
-async function fetchJSON(url){
-  log('Fetching ' + url);
-  const res = await fetch(url);
-  if(!res.ok) throw new Error(res.status + ' ' + res.statusText);
-  return res.json();
-}
-
-// ---------- HEIGHT from Floors (text) ----------
-function buildingHeightExpression() {
-  // using 'match' on Floors attribute; default 3m
-  return [
-    'match',
-    ['to-string', ['coalesce', ['get','Floors'], 'GROUNDFLOOR']],
-    'GROUNDFLOOR', 3,
-    'GROUND FLOOR', 3,
-    'G+1', 6,
-    'G+2', 9,
-    'G+3', 12,
-    'G+4', 15,
-    3
-  ];
-}
-
-
-
-// ---------- Fill right panel with ALL attributes ----------
-function fillInfoPanel(title, feature){
-  const titleEl = document.getElementById('infoTitle');
-  const tableEl = document.getElementById('infoTable');
-  const typeEl  = document.getElementById('infoTypeLine');
-
-  if (titleEl) titleEl.textContent = title || 'Information';
-  if (tableEl) tableEl.innerHTML = '';
-
-  if (!feature || !feature.properties) {
-    if (typeEl) typeEl.textContent = 'No feature selected.';
-    return;
-  }
-
-  const props = feature.properties;
-  const keys = Object.keys(props);
-
-  keys.forEach(k => {
-    const tr = document.createElement('tr');
-    const tk = document.createElement('td');
-    const tv = document.createElement('td');
-    tk.className = 'key';
-    tv.className = 'value';
-    tk.textContent = k;
-    tv.textContent = (props[k] === null || typeof props[k] === 'undefined' || props[k] === '') ? 'N/A' : String(props[k]);
-    tr.appendChild(tk);
-    tr.appendChild(tv);
-    if (tableEl) tableEl.appendChild(tr);
-  });
-
-  if (typeEl) typeEl.textContent = `Layer: ${title}`;
-}
-
-// ---------- fit map to data ----------
-function fitToData() {
-  try {
-    let geo = boundaryData || buildingsData;
-    if (!geo) return;
-    const b = turf.bbox(geo);
-    map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 40, duration: 0 });
-  } catch(e){
-    log('fitToData error: ' + e);
-  }
-}
-
-// ---------- PIE CHART + QUICK ANALYSIS ----------
-let pieChart = null;
-const palette = ['#2563eb','#16a34a','#f97316','#e11d48','#7c3aed','#0f766e','#b45309','#be123c','#15803d','#1e40af','#0e7490','#4f46e5','#a855f7','#1d4ed8','#dc2626'];
-
-// compute counts for a field (defensive)
-function computeCounts(fieldName){
-  const counts = {};
-  if (!buildingsData || !Array.isArray(buildingsData.features)) return { counts, total: 0 };
-  const feats = buildingsData.features;
-  for (const f of feats) {
-    const props = f.properties || {};
-    const vRaw = props[fieldName];
-    const v = (vRaw === null || typeof vRaw === 'undefined' || vRaw === '') ? 'No data' : String(vRaw);
-    counts[v] = (counts[v] || 0) + 1;
-  }
-  return { counts, total: feats.length };
-}
-
-// update building colours according to selected field (safe)
-function updateBuildingColors(fieldName, counts){
-  if (!map.getLayer('buildings-3d')) return;
-  const labels = Object.keys(counts);
-  if (labels.length === 0){
-    map.setPaintProperty('buildings-3d', 'fill-extrusion-color', '#3da5ff');
-    return;
-  }
-  const expr = [ 'match', ['to-string', ['coalesce', ['get', fieldName], 'No data']] ];
-  labels.forEach((label, idx) => { expr.push(label); expr.push(palette[idx % palette.length]); });
-  expr.push('#bbbbbb'); // default
-  map.setPaintProperty('buildings-3d', 'fill-extrusion-color', expr);
-}
-
-// update pie chart + stats (defensive)
-function updateAnalysis(fieldName){
-  if (!buildingsData) { // nothing to show yet
-    document.getElementById('statTotal').textContent = '';
-    document.getElementById('statTop').textContent = '';
-    if (pieChart) { pieChart.data.labels = []; pieChart.data.datasets[0].data = []; pieChart.update(); }
-    return;
-  }
-
-  const { counts, total } = computeCounts(fieldName);
-  const labels = Object.keys(counts);
-  const data = labels.map(l => counts[l]);
-
-  const ctxEl = document.getElementById('pieChart');
-  if (!ctxEl) return;
-  const ctx = ctxEl.getContext('2d');
-
-  if (!pieChart) {
-    pieChart = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: labels,
-        datasets: [{ data: data, backgroundColor: labels.map((_,i)=>palette[i % palette.length]) }]
-      },
-      options: {
-        responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ position:'bottom', labels:{ boxWidth:14, font:{ size:11 } } } }
-      }
-    });
-  } else {
-    pieChart.data.labels = labels;
-    pieChart.data.datasets[0].data = data;
-    pieChart.data.datasets[0].backgroundColor = labels.map((_,i)=>palette[i % palette.length]);
-    pieChart.update();
-  }
-
-  updateBuildingColors(fieldName, counts);
-
-  document.getElementById('statTotal').textContent = `Total households / buildings: ${total}`;
-  if (labels.length === 0) {
-    document.getElementById('statTop').textContent = 'No data in this field.';
-    return;
-  }
-  let topLabel = labels[0], topCount = counts[topLabel];
-  labels.forEach(l => { if (counts[l] > topCount) { topLabel = l; topCount = counts[l]; } });
-  const topPerc = total > 0 ? ((topCount*100)/total).toFixed(2) : 0;
-  document.getElementById('statTop').textContent = `Highest category: "${topLabel}" — ${topCount} (${topPerc}%)`;
-}
-
-document.getElementById('analysisField').addEventListener('change', function(){
-  updateAnalysis(this.value);
-});
-
-// ---------- Map load: add basemaps and your layers ----------
-map.on('load', async () => {
-  try {
-    // ---- Base maps ----
-    map.addSource('osm', { type:'raster', tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize:256 });
-    map.addLayer({ id:'osm', type:'raster', source:'osm', paint:{ 'raster-opacity':1 } });
-
-    map.addSource('satellite', {
-      type: 'raster',
-      tiles: [
-        'https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=VTyVRu9eUsVOXeBj5TqJ'
-      ],
-      tileSize: 256
-    });
-    map.addLayer({
-      id: 'satellite',
-      type: 'raster',
-      source: 'satellite',
-      layout: { visibility: 'none' },
-      paint: { 'raster-opacity': 1 }
-    });
-
-    // --- Bhuvan WMS LULC as raster tiles (visibility initially none) ---
-    map.addSource('bhuvan-lulc', {
-      type: 'raster',
-      tiles: [
-        'https://bhuvan-vec2.nrsc.gov.in/bhuvan/gwc/service/wms?' +
-        'SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&' +
-        'LAYERS=sisdp_phase2:SISDP_P2_LULC_10K_2016_2019_CG&' +
-        'STYLES=&FORMAT=image/png&TRANSPARENT=true&' +
-        'SRS=EPSG:3857&' +
-        'BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256'
-      ],
-      tileSize:256
-    });
-    map.addLayer({ id:'bhuvan-lulc', type:'raster', source:'bhuvan-lulc', layout:{ visibility:'none' }, paint:{ 'raster-opacity':0.95 } });
-
-    // ---- Your GeoJSON layers ----
-    buildingsData = await fetchJSON(BUILDINGS_URL);
-    boundaryData  = await fetchJSON(BOUNDARY_URL);
-
-    // boundary
-    map.addSource('village-boundary', { type:'geojson', data:boundaryData });
-    map.addLayer({ id:'village-fill', type:'fill', source:'village-boundary', paint:{ 'fill-color':'#fff59d','fill-opacity':0 } });
-    map.addLayer({ id:'village-outline', type:'line', source:'village-boundary', paint:{ 'line-color':'#f57f17','line-width':2.5 } });
-
-    // ---------- LULC CLIP MASK ----------
-    try {
-      let boundaryClean;
-      try {
-        boundaryClean = turf.buffer(boundaryData, 0.0001, { units: 'kilometers' });
-      } catch(e) {
-        console.warn('turf.buffer failed - using raw boundary', e);
-        boundaryClean = boundaryData;
-      }
-
-      const lulcMaskGeoJSON = turf.mask(boundaryClean);
-
-      map.addSource('lulc-mask', { type: 'geojson', data: lulcMaskGeoJSON });
-
-      map.addLayer({
-        id: 'lulc-mask',
-        type: 'fill',
-        source: 'lulc-mask',
-        paint: { 'fill-color': '#f5f7fb', 'fill-opacity': 1 }
-      }, 'village-outline');
-
-      map.setLayoutProperty('lulc-mask','visibility','none');
-
-      console.log('LULC clip mask created.');
-    } catch (err) {
-      console.error('Failed to create LULC mask:', err);
-      alert('Could not create LULC clip mask: ' + (err.message||err));
-    }
-
-    // buildings (generateId so we can highlight by id)
-    map.addSource('buildings', { type:'geojson', data:buildingsData, generateId:true });
-    map.addLayer({
-      id:'buildings-3d',
-      type:'fill-extrusion',
-      source:'buildings',
-      paint:{
-        'fill-extrusion-color':'#3da5ff',
-        'fill-extrusion-height': ['*', buildingHeightExpression(), 3],
-        'fill-extrusion-opacity':0.9
-      }
-    });
-
-    // highlight layer for selected building (yellow fill, red border feel)
-    map.addLayer({
-      id:'buildings-highlight',
-      type:'fill-extrusion',
-      source:'buildings',
-      paint:{
-        'fill-extrusion-color':'#ffeb3b',    // yellow
-        'fill-extrusion-height':['*', buildingHeightExpression(), 3.2],
-        'fill-extrusion-opacity':1
-      },
-      filter:['==',['id'], -1] // nothing selected initially
-    });
-
-    // ---- Measure tool sources & layers ----
-    map.addSource('measure-line', {
-      type:'geojson',
-      data:{ type:'FeatureCollection', features:[] }
-    });
-    map.addSource('measure-points', {
-      type:'geojson',
-      data:{ type:'FeatureCollection', features:[] }
-    });
-
-    map.addLayer({
-      id:'measure-line-layer',
-      type:'line',
-      source:'measure-line',
-      paint:{
-        'line-color':'#1d4ed8',
-        'line-width':3
-      }
-    });
-
-    map.addLayer({
-      id:'measure-points-layer',
-      type:'circle',
-      source:'measure-points',
-      paint:{
-        'circle-radius':4,
-        'circle-color':'#dc2626',
-        'circle-stroke-color':'#ffffff',
-        'circle-stroke-width':1
-      }
-    });
-
-    // set default view mode button state (3D)
-    if (btn3D) btn3D.classList.add('active');
-
-    // Fit map view
-    fitToData();
-    log('All layers added.');
-
-    // initial analysis only AFTER buildingsData exists
-    updateAnalysis(document.getElementById('analysisField').value);
-
-  } catch(err){
-    console.error(err);
-    alert('Error loading data: ' + err.message);
-  }
-});
-
-// helper to update highlight filter
-function setHighlightedBuilding(feature){
-  if (!map.getLayer('buildings-highlight')) return;
-
-  if (!feature || typeof feature.id === 'undefined' || feature.layer.id !== 'buildings-3d'){
-    selectedBuildingId = null;
-    map.setFilter('buildings-highlight', ['==', ['id'], -1]);
-    return;
-  }
-  selectedBuildingId = feature.id;
-  map.setFilter('buildings-highlight', ['==', ['id'], selectedBuildingId]);
-}
-
-// ----------- Click behaviour -----------
-map.on('click', (e) => {
-  if (measureActive){
-    // measuring mode: add points instead of showing info
-    handleMeasureClick(e.lngLat);
-    return;
-  }
-
-  const features = map.queryRenderedFeatures(e.point, { layers: ['buildings-3d','village-outline','village-fill'] });
-  if (!features.length) {
-    setHighlightedBuilding(null);
-    return;
-  }
-
-  const f = features[0];
-  if (f.layer && f.layer.id === 'buildings-3d') {
-    fillInfoPanel('Buildings', f);
-    setHighlightedBuilding(f); // highlight clicked building
-  } else {
-    fillInfoPanel('Village Boundary', f);
-    setHighlightedBuilding(null); // remove building highlight
-  }
-
-  // When feature is clicked, ensure right panel is visible
-  openRightPanel();
-});
-
-// ----------- Cursor behaviour (like 7.html style) -----------
-map.on('mousemove', (e) => {
-  const features = map.queryRenderedFeatures(e.point, { layers: ['buildings-3d','village-outline','village-fill'] });
-
-  if (measureActive){
-    // measure mode: crosshair (+ symbol)
-    map.getCanvas().style.cursor = 'crosshair';
-  } else if (features.length){
-    // hovering select-able feature: hand pointer
+  // 🔥 CURSOR CHANGE
+  map.on('mouseenter', layerId, () => {
     map.getCanvas().style.cursor = 'pointer';
-  } else {
-    // normal map: default arrow
+  });
+
+  map.on('mouseleave', layerId, () => {
     map.getCanvas().style.cursor = '';
+  });
+}
+
+
+
+
+function selectAllExistingAssets() {
+
+  // 1️⃣ Check all checkboxes + update state
+  Object.keys(EXISTING_ASSET_CATEGORIES).forEach(cat => {
+    EXISTING_ASSET_CATEGORIES[cat] = true;
+  });
+
+  document
+    .querySelectorAll('#layerPanel input[type="checkbox"]')
+    .forEach(cb => {
+      if (cb.getAttribute('onchange')?.includes('toggleExistingAssetCategory')) {
+        cb.checked = true;
+      }
+    });
+
+  // 2️⃣ Build allowed DESCRIPTIO keywords
+  let allowedKeywords = [];
+
+  Object.entries(EXISTING_ASSET_CATEGORY_MAP).forEach(
+    ([cat, keywords]) => {
+      if (EXISTING_ASSET_CATEGORIES[cat]) {
+        allowedKeywords.push(...keywords);
+      }
+    }
+  );
+
+  // 3️⃣ Show layers
+  map.setLayoutProperty('existing-assets-icon', 'visibility', 'visible');
+  map.setLayoutProperty('existing-assets-label', 'visibility', 'visible');
+
+  // 4️⃣ Apply DESCRIPTIO-based filter (🔥 THIS IS THE FIX)
+  const filter = [
+    'any',
+    ...allowedKeywords.map(k => [
+      'in',
+      k,
+      ['upcase', ['get', 'DESCRIPTIO']]
+    ])
+  ];
+
+  map.setFilter('existing-assets-icon', filter);
+  map.setFilter('existing-assets-label', filter);
+}
+
+
+function clearAllExistingAssets() {
+
+  Object.keys(EXISTING_ASSET_CATEGORIES)
+    .forEach(k => EXISTING_ASSET_CATEGORIES[k] = false);
+
+  document
+    .querySelectorAll('#layerPanel input[type="checkbox"]')
+    .forEach(cb => {
+      if (cb.getAttribute('onchange')?.includes('toggleExistingAssetCategory')) {
+        cb.checked = false;
+      }
+    });
+
+  map.setLayoutProperty('existing-assets-icon', 'visibility', 'none');
+  map.setLayoutProperty('existing-assets-label', 'visibility', 'none');
+}
+
+
+
+function showRoadKPIs(type) {
+
+  const kpiWrap = document.querySelector('.kpis');
+
+  // 🔥 mark single KPI mode
+  kpiWrap.classList.add('single-kpi');
+
+  // Hide all KPIs
+  document.querySelectorAll('.kpi').forEach(k => {
+    k.style.display = 'none';
+    k.style.outline = 'none';
+  });
+
+  if (type === 'BT') {
+    kpiBTCard.style.display = 'block';
+    kpiBTCard.style.outline = '3px solid #7c3aed';
+  }
+
+  if (type === 'CC') {
+    kpiCCCard.style.display = 'block';
+    kpiCCCard.style.outline = '3px solid #22c55e';
+  }
+
+  if (type === 'BOUNDARY') {
+    kpiBoundaryCard.style.display = 'block';
+    kpiBoundaryCard.style.outline = '3px solid #6b7280';
+  }
+
+  kpiWrap.style.display = 'grid';
+}
+
+
+function showCSRKPIs() {
+
+  const kpiWrap = document.querySelector('.kpis');
+  const csrBox  = document.getElementById('csrKpis');
+
+  // 🔥 SINGLE KPI MODE
+  kpiWrap.classList.add('single-kpi');
+
+  // 🔴 Hide all normal KPI cards
+  kpiWrap.querySelectorAll('.kpi').forEach(k => {
+    k.style.display = 'none';
+    k.style.outline = 'none';
+  });
+
+  // 🔴 Hide normal KPI wrapper
+  kpiWrap.style.display = 'none';
+
+  // ✅ SHOW CSR KPIs
+  csrBox.style.display = 'grid';
+
+  // ✅ SET VALUES
+  document.getElementById('csrCompleted').innerText = csrCompletedCount;
+  document.getElementById('csrNotStarted').innerText = csrNotStartedCount;
+}
+
+
+function buildAssetTypeCounts(features, allowedTypes) {
+  const counts = {};
+
+  allowedTypes.forEach(t => counts[t] = 0);
+
+  features.forEach(f => {
+    const type = f.properties.LAYER;
+    if (counts[type] !== undefined) {
+      counts[type]++;
+    }
+  });
+
+  return counts;
+}
+
+
+function buildCountsFromCategoryAssetMap(features) {
+  const counts = {};
+
+  // initialize all categories with 0
+  Object.keys(CATEGORY_ASSET_MAP).forEach(cat => {
+    counts[cat] = 0;
+  });
+
+  features.forEach(f => {
+    const layer = f.properties.LAYER;
+
+    for (const [category, assetList] of Object.entries(CATEGORY_ASSET_MAP)) {
+      if (assetList.includes(layer)) {
+        counts[category]++;
+        break;
+      }
+    }
+  });
+
+  return counts;
+}
+
+function updateDonut(features){
+
+  if (!infraChart) return; // 🔥 IMPORTANT
+
+  const counts = buildInfraCategoryCounts(features);
+
+  infraChart.data.datasets[0].data =
+    ALL_INFRA_CATEGORIES.map(c => counts[c]);
+
+  infraChart.update();
+}
+
+function showDonut() {
+  document.querySelector('.chart-box').style.display = 'block';
+  hideKpiHeader(); // 🔥 HIDE KPI TITLE WHEN DONUT IS SHOWN
+}
+
+function hideDonut() {
+  document.querySelector('.chart-box').style.display = 'none';
+}
+
+
+function showKPIs() {
+  document.querySelector('.kpis').style.display = 'grid';
+}
+
+function hideKPIs() {
+  document.querySelector('.kpis').style.display = 'none';
+}
+
+
+/* EXECUTIVE SUMMARY TOGGLE */
+document.getElementById('execToggle').addEventListener('click', () => {
+  const box = document.getElementById('execSummary');
+  const btn = document.getElementById('execToggle');
+
+  if (box.classList.contains('collapsed')) {
+    box.classList.remove('collapsed');
+    btn.innerText = '−';
+  } else {
+    box.classList.add('collapsed');
+    btn.innerText = '+';
   }
 });
 
-// ----------- Layer panel UI -----------
-document.getElementById('btnLayers').addEventListener('click', () => {
-  const el = document.getElementById('layerList');
-  el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+// 🔥 LEGEND TOGGLE – SAFE & GUARANTEED
+const legendToggle = document.getElementById('legendToggle');
+const mapLegend = document.getElementById('mapLegend');
+
+if (legendToggle && mapLegend) {
+  legendToggle.onclick = () => {
+    const isCollapsed = mapLegend.classList.contains('collapsed');
+
+    mapLegend.classList.toggle('collapsed');
+    legendToggle.innerText = isCollapsed ? '−' : '+';
+  };
+}
+
+
+function setLayersVisibility(layerIds, visible){
+  layerIds.forEach(id=>{
+    if(map.getLayer(id)){
+      map.setLayoutProperty(id,'visibility', visible ? 'visible' : 'none');
+    }
+  });
+}
+
+function clearSelection() {
+
+  // Clear highlight
+  if (map.getSource('feature-highlight')) {
+    map.getSource('feature-highlight').setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+  }
+
+  // Remove popup if any
+  document.querySelectorAll('.maplibregl-popup')
+    .forEach(p => p.remove());
+}
+
+
+document.addEventListener('keydown', (e) => {
+
+  // ESC key
+  if (e.key === 'Escape') {
+    clearSelection();
+  }
+
 });
 
-// basemap toggle function
-function setBasemap(layerId) {
-  const ids = ['osm','satellite','bhuvan-lulc'];
-  ids.forEach(id => {
-    if (map.getLayer(id)) map.setLayoutProperty(id,'visibility', id === layerId ? 'visible' : 'none');
+
+function clearAllMapFilters(){
+  if(map.getLayer('points')) map.setFilter('points', null);
+  if(map.getLayer('asset-labels')) map.setFilter('asset-labels', null);
+  if(map.getLayer('roads-bt')) map.setFilter('roads-bt', ['==', ['get','LAYER'], 'BT ROAD']);
+  if(map.getLayer('roads-cc')) map.setFilter('roads-cc', ['==', ['get','LAYER'], 'CC ROAD']);
+}
+
+
+function hideAllLayers(){
+  Object.values(ALL_MAP_LAYERS).flat()
+    .forEach(id=>{
+      if(map.getLayer(id)){
+        map.setLayoutProperty(id,'visibility','none');
+      }
+    });
+}
+
+
+function focusMode({ layers=[], tableData=[] }){
+
+  // 🔥 CRITICAL FIX
+  clearAllMapFilters();
+
+  // 1️⃣ Hide everything
+  Object.values(ALL_MAP_LAYERS).flat().forEach(id=>{
+    if(map.getLayer(id)){
+      map.setLayoutProperty(id,'visibility','none');
+    }
   });
-  // show/hide LULC mask together with bhuvan-lulc
-  if (map.getLayer('lulc-mask')) {
-    const visible = (layerId === 'bhuvan-lulc') ? 'visible' : 'none';
-    map.setLayoutProperty('lulc-mask','visibility', visible);
+
+  // 2️⃣ Show only requested layers
+  layers.forEach(group=>{
+    ALL_MAP_LAYERS[group].forEach(id=>{
+      if(map.getLayer(id)){
+        map.setLayoutProperty(id,'visibility','visible');
+      }
+    });
+  });
+
+  // 3️⃣ Clear highlight
+  map.getSource('feature-highlight').setData({
+    type:'FeatureCollection',
+    features:[]
+  });
+
+  // 4️⃣ Update table
+  renderTable(tableData);
+
+  // 5️⃣ Update KPIs
+  updateKPIs(tableData);
+}
+
+
+
+
+function toggleProposedAssets(cb) {
+  const visible = cb.checked ? 'visible' : 'none';
+
+  // 🔥 POINTS
+  if (map.getLayer('points')) {
+    map.setLayoutProperty('points', 'visibility', visible);
+  }
+
+  // 🔥 LABELS (THIS WAS MISSING)
+  if (map.getLayer('asset-labels')) {
+    map.setLayoutProperty('asset-labels', 'visibility', visible);
   }
 }
 
-// attach radio listeners
-document.querySelectorAll('input[name="basemap"]').forEach(r => {
-  r.addEventListener('change', () => { setBasemap(r.value); });
+
+
+function getDefaultTableData(){
+
+  const points = (
+    allAssetsData &&
+    Array.isArray(allAssetsData.features)
+  ) ? allAssetsData.features : [];
+
+  const roads = (
+    allRoadsData &&
+    Array.isArray(allRoadsData.features)
+  ) ? allRoadsData.features : [];
+
+  return [...points, ...roads];
+}
+
+
+function activateRoadBtn(btn){
+
+  const isActive = btn.classList.contains('active');
+
+  document
+    .querySelectorAll('#categoryButtons button')
+    .forEach(b => b.classList.remove('active'));
+
+  if (!isActive) {
+    btn.classList.add('active');
+  }
+}
+
+function highlightCleanFeature(feature){
+  map.getSource('feature-highlight').setData({
+    type: 'FeatureCollection',
+    features: [feature]
+  });
+}
+
+
+function setActiveButton(category){
+  document.querySelectorAll('#categoryButtons button')
+    .forEach(btn=>{
+      btn.classList.remove('active');
+      if(category && btn.dataset.category === category){
+        btn.classList.add('active');
+      }
+    });
+}
+
+function renderTable(features){
+  const tbody = document.getElementById('assetTableBody');
+  tbody.innerHTML = '';
+  currentTableData = features;
+
+features.forEach((f, index)=>{
+    const tr = document.createElement('tr');
+    tr.style.cursor='pointer';
+
+    const isLine = f.geometry.type !== 'Point';
+	
+
+tr.innerHTML = `
+  <td>${index + 1}</td>
+  <td>${f.properties.NAME || '—'}</td>
+  <td>${f.properties.LAYER || '—'}</td>
+  <td>${infraCategoryMap[f.properties.LAYER] || '—'}</td>
+`;
+
+
+tr.onclick = () => {
+
+  // 🔥 CLEAR OLD HIGHLIGHT
+  map.getSource('feature-highlight').setData({
+    type: 'FeatureCollection',
+    features: []
+  });
+
+  if (f.geometry.type === 'Point') {
+
+    map.flyTo({
+      center: f.geometry.coordinates,
+      zoom: 17,
+      speed: 0.8
+    });
+
+  } else {
+
+    map.fitBounds(turf.bbox(f), {
+      padding: 50,
+      duration: 800
+    });
+
+  }
+
+  // 🔥 HIGHLIGHT (POINT OR LINE)
+  highlightCleanFeature(f);
+};
+
+
+    tbody.appendChild(tr);
+  });
+}
+
+
+function renderRoadTable(features){
+  const tbody = document.getElementById('assetTableBody');
+  tbody.innerHTML = '';
+  currentTableData = features;
+
+
+  features.forEach((f, index)=>{
+    const lenKm = f.properties.Shape_Leng
+      ? (f.properties.Shape_Leng / 1000).toFixed(2)
+      : '-';
+
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+
+tr.innerHTML = `
+  <td>${index + 1}</td>
+  <td>${f.properties.NAME || 'Road'}</td>
+  <td>${f.properties.LAYER}</td>
+  <td>${lenKm} km</td>
+`;
+
+
+tr.onclick = () => {
+
+  map.getSource('feature-highlight').setData({
+    type: 'FeatureCollection',
+    features: []
+  });
+
+  map.fitBounds(turf.bbox(f), {
+    padding: 50,
+    duration: 800
+  });
+
+  highlightCleanFeature(f);
+};
+
+    tbody.appendChild(tr);
+  });
+}
+
+function zoomToFullExtent(){
+
+  let bounds = null;
+
+  // Assets (points)
+  if (allAssetsData && allAssetsData.features.length) {
+    bounds = turf.bbox(allAssetsData);
+  }
+
+  // Roads
+  if (allRoadsData && allRoadsData.features.length) {
+    const roadBounds = turf.bbox(allRoadsData);
+    bounds = bounds
+      ? turf.bboxPolygon([
+          Math.min(bounds[0], roadBounds[0]),
+          Math.min(bounds[1], roadBounds[1]),
+          Math.max(bounds[2], roadBounds[2]),
+          Math.max(bounds[3], roadBounds[3])
+        ]).bbox
+      : roadBounds;
+  }
+
+  // Safety check
+  if (!bounds) return;
+
+  map.fitBounds(bounds, {
+    padding: 60,
+    duration: 1000
+  });
+}
+
+function resetAllFilters(){
+
+  // Clear filters
+  map.setFilter('points', null);
+  map.setFilter('asset-labels', null);
+
+  // Show all layers
+  [
+    'points','asset-labels',
+    'roads-bt','roads-cc',
+    'drain','wall-3d'
+  ].forEach(id=>{
+    if(map.getLayer(id)){
+      map.setLayoutProperty(id,'visibility','visible');
+    }
+  });
+
+  // Reset table + KPIs
+  renderTable(getDefaultTableData());
+  updateKPIs(allAssetsData.features);
+
+  // ✅ DONUT ONLY MODE
+  hideKPIs();        // 🔴 hide KPI box
+  showDonut();       // 🟢 show donut
+  resetDonut();
+
+  // ❌ CSR KPIs OFF
+  document.getElementById('csrKpis').style.display = 'none';
+
+  // 🔁 Default table
+  document.getElementById('csrTableBox').style.display = 'none';
+  document.getElementById('assetTableBox').style.display = 'block';
+
+  // Clear buttons
+  document.querySelectorAll('#categoryButtons button')
+    .forEach(b => b.classList.remove('active'));
+
+  zoomToFullExtent();
+}
+
+
+
+
+function hideAllMapLayers(){
+
+  const allLayers = [
+    'points','asset-labels',
+    'roads-bt','roads-cc',
+    'drain','wall-3d'
+  ];
+
+  allLayers.forEach(id=>{
+    if(map.getLayer(id)){
+      map.setLayoutProperty(id,'visibility','none');
+    }
+  });
+}
+
+
+function updateKPIs(features){
+
+  let assetCount = 0;
+  let categories = new Set();
+
+  features.forEach(f=>{
+    if (f.geometry.type === 'Point') {
+      assetCount++;
+      const cat = infraCategoryMap[f.properties.LAYER];
+      if (cat) categories.add(cat);
+    }
+  });
+
+  kpiAssets.innerText = assetCount;
+  kpiTypes.innerText = categories.size;
+}
+
+
+function exportTable(){
+
+  if (!currentTableData.length) {
+    alert('No data to export');
+    return;
+  }
+
+  let csv = "Name,Type,Extra\n";
+
+  currentTableData.forEach(f=>{
+    csv += `"${f.properties.NAME || ''}",` +
+           `"${f.properties.LAYER || ''}",` +
+           `"${f.properties.Shape_Leng ? (f.properties.Shape_Leng/1000).toFixed(2)+' km' : ''}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+
+  link.href = URL.createObjectURL(blob);
+  link.download = "Samalwar_Table_Export.csv";
+  link.click();
+}
+
+function toggleExistingAssets(cb){
+
+  const visibility = cb.checked ? 'visible' : 'none';
+
+  // ICON layer
+  if (map.getLayer('existing-assets-icon')) {
+    map.setLayoutProperty(
+      'existing-assets-icon',
+      'visibility',
+      visibility
+    );
+  }
+
+  // LABEL layer
+  if (map.getLayer('existing-assets-label')) {
+    map.setLayoutProperty(
+      'existing-assets-label',
+      'visibility',
+      visibility
+    );
+  }
+}
+
+function toggleExistingAssetCategory(category, cb) {
+
+  EXISTING_ASSET_CATEGORIES[category] = cb.checked;
+
+  const activeCategories = Object.keys(EXISTING_ASSET_CATEGORIES)
+    .filter(k => EXISTING_ASSET_CATEGORIES[k]);
+
+  // 🔴 IF NONE ACTIVE → HIDE COMPLETELY
+  if (activeCategories.length === 0) {
+    map.setLayoutProperty('existing-assets-icon', 'visibility', 'none');
+    map.setLayoutProperty('existing-assets-label', 'visibility', 'none');
+    return;
+  }
+
+  // 🟢 SHOW LAYERS
+  map.setLayoutProperty('existing-assets-icon', 'visibility', 'visible');
+  map.setLayoutProperty('existing-assets-label', 'visibility', 'visible');
+
+  // 🔥 BUILD FILTER FROM DESCRIPTIO
+  const filters = ['any'];
+
+  activeCategories.forEach(cat => {
+    const keywords = EXISTING_ASSET_CATEGORY_MAP[cat] || [];
+
+    keywords.forEach(k => {
+      filters.push([
+        'in',
+        k,
+        ['upcase', ['get', 'DESCRIPTIO']]
+      ]);
+    });
+  });
+
+  map.setFilter('existing-assets-icon', filters);
+  map.setFilter('existing-assets-label', filters);
+}
+
+function showKpiHeader() {
+  document.getElementById('kpiHeader').style.display = 'block';
+}
+
+function hideKpiHeader() {
+  document.getElementById('kpiHeader').style.display = 'none';
+}
+
+
+function toggleRoad(type, btn){
+
+  // 🔥 EXIT CSR MODE
+  exitCSRMode();
+
+  document.getElementById('kpiHeader').style.display = 'block';
+
+  // 1️⃣ Hide everything
+  hideAllMapLayers();
+
+  // 2️⃣ Show only selected road
+  const layerId = type === 'BT' ? 'roads-bt' : 'roads-cc';
+  map.setLayoutProperty(layerId,'visibility','visible');
+
+  // 3️⃣ Hide donut, show KPIs
+  hideDonut();
+  showRoadKPIs(type);
+  showKpiHeader();
+
+  // 4️⃣ Table
+  const filtered = allRoadsData.features.filter(
+    f => f.properties.LAYER === (type === 'BT' ? 'BT ROAD' : 'CC ROAD')
+  );
+  renderRoadTable(filtered);
+
+  // 5️⃣ Button UI
+  document.querySelectorAll('#categoryButtons button')
+    .forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function restoreNormalKPIState() {
+
+  const kpiWrap = document.querySelector('.kpis');
+  const csrBox  = document.getElementById('csrKpis');
+
+  // 🔁 Hide CSR KPIs
+  csrBox.style.display = 'none';
+
+  // 🔁 Restore normal KPI layout
+  kpiWrap.style.display = 'grid';
+  kpiWrap.classList.remove('single-kpi');
+
+  // 🔁 Show ONLY normal KPI cards
+  kpiWrap.querySelectorAll('.kpi').forEach(k => {
+    k.style.display = 'block';
+    k.style.outline = 'none';
+  });
+
+  // 🔁 Restore donut + header
+hideKPIs();
+showDonut();
+resetDonut();
+document.getElementById('kpiHeader').style.display = 'none';
+}
+
+function exitCSRMode() {
+
+  // 🔁 TABLES
+  document.getElementById('csrTableBox').style.display = 'none';
+  document.getElementById('assetTableBox').style.display = 'block';
+
+  // 🔁 CSR MAP LAYERS OFF
+  CSR_LAYERS.forEach(id => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', 'none');
+    }
+  });
+
+  // 🔁 CSR narrative OFF
+  const csrNarrative = document.getElementById('csrNarrative');
+  if (csrNarrative) csrNarrative.style.display = 'none';
+
+  // 🔥 RESTORE KPI STATE
+  restoreNormalKPIState();
+}
+
+
+
+
+function toggleBoundaryWall(btn){
+
+  // 🔥 EXIT CSR MODE FIRST
+  exitCSRMode();
+
+  document.getElementById('kpiHeader').style.display = 'block';
+
+  // 1️⃣ Hide everything
+  hideAllMapLayers();
+
+  // 2️⃣ Show wall
+  if (map.getLayer('wall-3d')) {
+    map.setLayoutProperty('wall-3d','visibility','visible');
+  }
+
+  // 3️⃣ Hide donut, show KPIs
+  hideDonut();
+  showRoadKPIs('BOUNDARY');
+  showKpiHeader();
+
+  // 4️⃣ Table (only wall features)
+  const filtered = allRoadsData.features.filter(
+    f => f.properties.LAYER === 'BOUNDARY WALL'
+  );
+  renderRoadTable(filtered);
+
+  // 5️⃣ Button UI
+  document.querySelectorAll('#categoryButtons button')
+    .forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+
+
+
+function syncRoadCheckboxes(btVisible, ccVisible) {
+  const checkboxes = document.querySelectorAll('#layerPanel input[type="checkbox"]');
+
+  checkboxes.forEach(cb => {
+    if (cb.getAttribute('onchange')?.includes('roads-bt')) {
+      cb.checked = btVisible;
+    }
+    if (cb.getAttribute('onchange')?.includes('roads-cc')) {
+      cb.checked = ccVisible;
+    }
+  });
+}
+
+function buildInfraCategoryCounts(features){
+
+  let counts = {};
+  ALL_INFRA_CATEGORIES.forEach(c => counts[c] = 0);
+
+  features.forEach(f => {
+    const cat = infraCategoryMap[f.properties.LAYER];
+    if (cat) counts[cat]++;
+  });
+
+  return counts;
+}
+
+
+
+
+// ================= GLOBAL TOGGLE FUNCTIONS =================
+
+function toggle(id, cb){
+  if (!map || !map.getLayer(id)) {
+    console.warn('Layer not found:', id);
+    return;
+  }
+  map.setLayoutProperty(
+    id,
+    'visibility',
+    cb.checked ? 'visible' : 'none'
+  );
+}
+
+function toggleAllDroneImages(cb){
+  if (!map) return;
+  const visibility = cb.checked ? 'visible' : 'none';
+
+  ['custom-tiles','custom-tiles-2','custom-tiles-3']
+    .forEach(id=>{
+      if(map.getLayer(id)){
+        map.setLayoutProperty(id,'visibility',visibility);
+      }
+    });
+}
+
+function toggleSatellite(cb){
+  if (!map || !map.getLayer('satellite')) return;
+  map.setLayoutProperty(
+    'satellite',
+    'visibility',
+    cb.checked ? 'visible' : 'none'
+  );
+}
+function toggleLanduse(cb) {
+  const visibility = cb.checked ? 'visible' : 'none';
+
+  // 3D landuse
+  if (map.getLayer('landuse-3d')) {
+    map.setLayoutProperty('landuse-3d', 'visibility', visibility);
+  }
+
+  // 🔥 IMPORTANT: pick layer
+  if (map.getLayer('landuse-pick')) {
+    map.setLayoutProperty('landuse-pick', 'visibility', visibility);
+  }
+
+  // clear highlight when OFF
+  if (!cb.checked && map.getSource('feature-highlight')) {
+    map.getSource('feature-highlight').setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+  }
+}
+
+
+
+function showCSRFlyStep(asset) {
+
+  // 🔴 remove old popups
+  document.querySelectorAll('.maplibregl-popup')
+    .forEach(p => p.remove());
+
+  // 🔴 clear old highlight
+  if (map.getSource('feature-highlight')) {
+    map.getSource('feature-highlight').setData({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: asset.center
+        }
+      }]
+    });
+  }
+
+  // 🖼 PHOTO POPUP
+  new maplibregl.Popup({
+    closeButton: false,
+    offset: 30,
+    maxWidth: '320px'
+  })
+  .setLngLat(asset.center)
+  .setHTML(`
+    <div style="font-family:Segoe UI;">
+      <b style="font-size:14px;">${asset.title}</b><br>
+      <img src="${asset.image}"
+           style="width:100%;margin-top:6px;border-radius:8px;">
+    </div>
+  `)
+  .addTo(map);
+}
+
+function runCSRFlyThrough() {
+document.getElementById('csrNarrative').style.display = 'block';
+
+  map.boxZoom.disable();
+  map.dragPan.disable();
+  map.dragRotate.disable();
+  map.scrollZoom.disable();
+  map.doubleClickZoom.disable();
+  map.keyboard.disable();
+  map.touchZoomRotate.disable();
+
+  setTimeout(() => {
+
+    // 1️⃣ BANK
+    map.flyTo({ center: CSR_FLY_ASSETS[0].center, zoom:18.6, pitch:65, bearing:-25, speed:0.6 });
+    showCSRFlyStep(CSR_FLY_ASSETS[0]);
+
+    // 2️⃣ ANGANWADI
+    setTimeout(() => {
+      map.flyTo({ center: CSR_FLY_ASSETS[1].center, zoom:18.6, pitch:65, bearing:-15, speed:0.6 });
+      showCSRFlyStep(CSR_FLY_ASSETS[1]);
+    }, 3000);
+
+    // 3️⃣ KITCHEN
+    setTimeout(() => {
+      map.flyTo({ center: CSR_FLY_ASSETS[2].center, zoom:18.4, pitch:65, bearing:5, speed:0.6 });
+      showCSRFlyStep(CSR_FLY_ASSETS[2]);
+    }, 6000);
+
+    // 4️⃣ CC ROAD
+    setTimeout(() => {
+      map.flyTo({ center: CSR_FLY_ASSETS[3].center, zoom:17.9, pitch:55, bearing:-15, speed:0.6 });
+      showCSRFlyStep(CSR_FLY_ASSETS[3]);
+    }, 9000);
+
+    // 🔓 unlock
+    setTimeout(() => {
+      map.boxZoom.enable();
+      map.dragPan.enable();
+      map.dragRotate.enable();
+      map.scrollZoom.enable();
+      map.doubleClickZoom.enable();
+      map.keyboard.enable();
+      map.touchZoomRotate.enable();
+	  document.getElementById('csrNarrative').style.display = 'none';
+    }, 12000);
+
+  }, 1000);
+}
+
+
+
+
+const map=new maplibregl.Map({
+  container: 'map',
+  style: 'https://api.maptiler.com/maps/streets-v4/style.json?key=CrM6DtW2lDzoc91uhUpc',
+  center: [78.9629, 20.5937],   // 🇮🇳 India center
+  zoom: 4.5,
+  pitch: 0,
+  bearing: 0
+});
+map.addControl(new maplibregl.NavigationControl());
+
+// 🇮🇳 INDIA – FORCE 2D VIEW
+function resetToIndia2D() {
+  map.easeTo({
+    center: [78.9629, 20.5937], // India
+    zoom: 4.5,
+    pitch: 0,     // 🔥 FORCE 2D
+    bearing: 0,   // 🔥 NORTH UP
+    duration: 1200
+  });
+}
+
+const hamburger = document.getElementById('hamburger');
+const layerPanel = document.getElementById('layerPanel');
+
+hamburger.onclick = () => {
+  layerPanel.style.display =
+    layerPanel.style.display === 'block' ? 'none' : 'block';
+};
+
+function addCSRPhotoPopup(layerId) {
+  map.on('click', layerId, (e) => {
+    const f = e.features[0];
+    const name = f.properties.NAME;
+
+    const asset = CSR_FLY_ASSETS.find(a =>
+      name && a.title.toUpperCase().includes(name.toUpperCase().split(' ')[0])
+    );
+
+    if (!asset) return;
+
+    new maplibregl.Popup({ maxWidth: '320px', offset: 20 })
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <div style="font-family:Segoe UI;">
+          <b>${asset.title}</b><br>
+          <img src="${asset.image}"
+               style="width:100%;margin-top:6px;border-radius:8px;">
+        </div>
+      `)
+      .addTo(map);
+  });
+}
+
+function renderCSRTable() {
+  const tbody = document.getElementById('csrTableBody');
+  tbody.innerHTML = '';
+
+  csrTableData.forEach(r => {
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td>${r.slno}</td>
+      <td style="text-align:left;">${r.activity}</td>
+      <td>${r.status}</td>
+      <td>${r.type}</td>
+      <td>${r.remarks || ''}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function showCSRWorks(){
+
+  // 🔥 FORCE EXIT ANY PREVIOUS MODE
+  exitCSRMode();
+
+  // Tables
+  document.getElementById('assetTableBox').style.display = 'none';
+  document.getElementById('csrTableBox').style.display = 'block';
+
+  // 🔥 HARD RESET KPI UI
+  hideKPIs();
+  hideDonut();
+  document.getElementById('kpiHeader').style.display = 'none';
+
+  // 🔥 CSR KPI MODE
+  showCSRKPIs();
+
+  // Map layers
+  hideAllMapLayers();
+  CSR_LAYERS.forEach(id => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', 'visible');
+    }
+  });
+
+  // Render CSR table
+  renderCSRTable();
+
+  // Button UI
+  document.querySelectorAll('#categoryButtons button')
+    .forEach(b => b.classList.remove('active'));
+}
+
+map.on('load', () => {
+
+
+// 🔴 GLOBAL HIGHLIGHT SOURCE (MISSING – CRITICAL)
+map.addSource('feature-highlight', {
+  type: 'geojson',
+  data: {
+    type: 'FeatureCollection',
+    features: []
+  }
 });
 
-// toggle buildings
-document.getElementById('toggleBuildings').addEventListener('change', function(){
-  const vis = this.checked ? 'visible' : 'none';
-  if (map.getLayer('buildings-3d')) map.setLayoutProperty('buildings-3d','visibility',vis);
-  if (map.getLayer('buildings-highlight')) map.setLayoutProperty('buildings-highlight','visibility',vis);
+// ===============================
+// VILLAGE FILTER – STATE / BLOCK / VILLAGE
+// ===============================
+let villageData = null;
+
+fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_vbs.geojson')
+  .then(r => r.json())
+  .then(data => {
+    villageData = data;
+    populateVillageFilters(data);
+  });
+
+function populateVillageFilters(data) {
+
+  const stateSel = document.getElementById('stateSelect');
+  const blockSel = document.getElementById('blockSelect');
+  const villageSel = document.getElementById('villageSelect');
+
+  if (!stateSel || !blockSel || !villageSel) return;
+
+  const states = [...new Set(data.features.map(f => f.properties.State))];
+
+  states.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s;
+    o.textContent = s;
+    stateSel.appendChild(o);
+  });
+
+  stateSel.onchange = () => {
+    blockSel.innerHTML = '<option value="">Select Block</option>';
+    villageSel.innerHTML = '<option value="">Select Village</option>';
+
+    const blocks = [...new Set(
+      data.features
+        .filter(f => f.properties.State === stateSel.value)
+        .map(f => f.properties.Block)
+    )];
+
+    blocks.forEach(b => {
+      const o = document.createElement('option');
+      o.value = b;
+      o.textContent = b;
+      blockSel.appendChild(o);
+    });
+  };
+
+  blockSel.onchange = () => {
+    villageSel.innerHTML = '<option value="">Select Village</option>';
+
+    const villages = data.features.filter(
+      f => f.properties.State === stateSel.value &&
+           f.properties.Block === blockSel.value
+    );
+
+    villages.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v.properties.Village;
+      o.textContent = v.properties.Village;
+      villageSel.appendChild(o);
+    });
+  };
+
+  villageSel.onchange = () => {
+    const village = villageSel.value;
+
+    map.setLayoutProperty('boundary', 'visibility', 'visible');
+    map.setFilter('boundary', ['==', ['get', 'Village'], village]);
+
+    const feature = data.features.find(
+      f => f.properties.Village === village
+    );
+
+    if (feature) {
+      map.fitBounds(turf.bbox(feature), {
+        padding: 50,
+        duration: 1000
+      });
+    }
+  };
+}
+
+// ===============================
+// STEP-5: SEARCH & RESET BUTTONS
+// ===============================
+
+document.querySelector('.search-btn').onclick = () => {
+  const village = document.getElementById('villageSelect').value;
+  if (!village) {
+    alert('Please select a village');
+    return;
+  }
+
+  map.setLayoutProperty('boundary', 'visibility', 'visible');
+  map.setFilter('boundary', ['==', ['get', 'Village'], village]);
+
+  const feature = villageData.features.find(
+    f => f.properties.Village === village
+  );
+
+  if (feature) {
+    map.fitBounds(turf.bbox(feature), {
+      padding: 60,
+      duration: 1200
+    });
+
+    // 🔥 START FLY-THROUGH AFTER ZOOM
+    setTimeout(() => {
+      runCSRFlyThrough();
+    }, 1500);
+  }
+};
+
+document.querySelector('.reset-btn').onclick = () => {
+
+  // 🔹 Reset dropdowns
+  document.getElementById('stateSelect').value = '';
+  document.getElementById('blockSelect').innerHTML =
+    '<option value="">Select Block</option>';
+  document.getElementById('villageSelect').innerHTML =
+    '<option value="">Select Village</option>';
+
+  // 🔥 SHOW ALL VILLAGE BOUNDARIES
+  map.setFilter('boundary', null);
+  map.setLayoutProperty('boundary', 'visibility', 'visible');
+
+  // 🔹 Hide CSR narrative
+  const csrBox = document.getElementById('csrNarrative');
+  if (csrBox) csrBox.style.display = 'none';
+
+  // 🔹 Remove all popups
+  document.querySelectorAll('.maplibregl-popup')
+    .forEach(p => p.remove());
+
+  // 🔹 Clear highlight
+  if (map.getSource('feature-highlight')) {
+    map.getSource('feature-highlight').setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+  }
+
+  // 🔥 FORCE INDIA 2D VIEW
+  resetToIndia2D();
+};
+
+
+Papa.parse(
+  'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/SAMALWAR-NMDC%20CSR%20Works_25022026.csv',
+  {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: h => h.replace(/\uFEFF/g, '').trim(), // 🔥 BOM FIX
+
+    complete: function (results) {
+
+      csrTableData = [];
+      csrCompletedCount = 0;
+      csrNotStartedCount = 0;
+
+      results.data.forEach(row => {
+
+        const status = (row['Work Status'] || row['Work status'] || '').trim();
+
+        csrTableData.push({
+          slno: row['Sl No'] || row['Sl. No'] || '',
+          activity: row['NMDC CSR - Activity description']
+                    || row['NMDC CSR – Activity description']
+                    || '',
+          status: status,
+          type: row['Civil Worlks / Financial Assistance']
+                || row['Civil Worlks / Financial Assistance']
+                || '',
+          remarks: row['Remarks (if any)'] || ''
+        });
+
+        if (status === 'Completed') csrCompletedCount++;
+        if (status === 'Not Started') csrNotStartedCount++;
+      });
+
+      renderCSRTable();   // 🔥 IMPORTANT
+    }
+  }
+);
+
+  // 🔴 POINT HIGHLIGHT
+  map.addLayer({
+    id: 'feature-highlight-point',
+    type: 'circle',
+    source: 'feature-highlight',
+    filter: ['==', '$type', 'Point'],
+    paint: {
+      'circle-radius': 12,
+      'circle-color': '#ff0000',
+      'circle-opacity': 0.6,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 3
+    }
+  });
+
+  // 🔴 LINE HIGHLIGHT
+  map.addLayer({
+    id: 'feature-highlight-line',
+    type: 'line',
+    source: 'feature-highlight',
+    filter: ['==', '$type', 'LineString'],
+    paint: {
+      'line-color': '#ff0000',
+      'line-width': 10
+    }
+  });
+
+// 🔴 CSR POLYGON HIGHLIGHT
+map.addLayer({
+  id: 'feature-highlight-csr',
+  type: 'fill-extrusion',
+  source: 'feature-highlight',
+  filter: ['==', '$type', 'Polygon'],
+  paint: {
+    'fill-extrusion-color': '#ff0000',
+    'fill-extrusion-height': 12,
+    'fill-extrusion-opacity': 0.95
+  }
 });
 
-// toggle boundary
-document.getElementById('toggleBoundary').addEventListener('change', function(){
-  const vis = this.checked ? 'visible' : 'none';
-  if (map.getLayer('village-fill')) map.setLayoutProperty('village-fill','visibility',vis);
-  if (map.getLayer('village-outline')) map.setLayoutProperty('village-outline','visibility',vis);
+
+
+
+map.addSource('satellite',{
+  type:'raster',
+  tiles:[
+    'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+  ],
+  tileSize:256,
+  attribution: '© Google'
 });
 
-// 2D / 3D buttons
-if (btn2D){
-  btn2D.addEventListener('click', () => {
-    set2DView();
+map.addLayer({
+  id:'satellite',
+  type:'raster',
+  source:'satellite',
+  layout:{ visibility:'none' }
+});
+
+
+
+
+/* CUSTOM MAPTILER TILESET */
+map.addSource('custom-tiles', {
+  type: 'raster',
+  tiles: [
+    'https://api.maptiler.com/tiles/019bdfd4-0367-7856-b471-411354ec9456/{z}/{x}/{y}.webp?key=IIOg8XrNVRxxY7Q8FZq9'
+  ],
+  tileSize: 256
+});
+
+map.addLayer({
+  id: 'custom-tiles',
+  type: 'raster',
+  source: 'custom-tiles',
+   minzoom: 15,
+  layout: {
+    visibility: 'none'   // IMPORTANT: starts OFF
+  }
+});
+
+/* CUSTOM MAPTILER TILESET – 2 */
+map.addSource('custom-tiles-2', {
+  type: 'raster',
+  tiles: [
+    'https://api.maptiler.com/tiles/019be00b-1035-7f33-8e71-17a439354ddc/{z}/{x}/{y}.webp?key=ImWmkzmSRgV6JxtUNT4L'
+  ],
+  tileSize: 256
+});
+
+map.addLayer({
+  id: 'custom-tiles-2',
+  type: 'raster',
+  source: 'custom-tiles-2',
+   minzoom: 15,
+  layout: {
+    visibility: 'none'   // OFF by default
+  }
+});
+
+/* CUSTOM MAPTILER TILESET – 3 */
+map.addSource('custom-tiles-3', {
+  type: 'raster',
+  tiles: [
+    'https://api.maptiler.com/tiles/019be01f-0291-7f9e-a4ac-b6643e91a5aa/{z}/{x}/{y}.webp?key=C8Txr9n6hdQqTYvqjBMn'
+  ],
+  tileSize: 256
+});
+
+map.addLayer({
+  id: 'custom-tiles-3',
+  type: 'raster',
+  source: 'custom-tiles-3',
+   minzoom: 15,
+  layout: {
+    visibility: 'none'
+  }
+});
+
+
+/* VILLAGE BOUNDARY */
+map.addSource('boundary',{
+ type:'geojson',
+ data:'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_vbs.geojson'
+});
+map.addLayer({
+ id:'boundary',
+ type:'line',
+ source:'boundary',
+ paint:{'line-color':'#5b3a0e','line-width':10}
+});
+
+  /* ===============================
+   LANDUSE SOURCE
+   =============================== */
+map.addSource('landuse', {
+  type: 'geojson',
+  data: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Landuse_Samalwar.geojson'
+});
+
+/* ===============================
+   LANDUSE PICK LAYER (2D, INVISIBLE)
+   =============================== */
+map.addLayer({
+  id: 'landuse-pick',
+  type: 'fill',
+  source: 'landuse',
+  layout: {
+    visibility: 'none'
+  },
+  paint: {
+    'fill-color': '#000000',
+    'fill-opacity': 0.01   // 🔥 invisible but clickable
+  }
+});
+
+
+/* ===============================
+   LANDUSE 3D LAYER
+   =============================== */
+map.addLayer({
+  id: 'landuse-3d',
+  type: 'fill-extrusion',
+  source: 'landuse',
+  minzoom: 14,
+  layout: {
+    visibility: 'none'   // controlled by layer panel
+  },
+  paint: {
+
+    /* COLOR */
+    'fill-extrusion-color': [
+      'match',
+      ['get', 'LAYER'],
+      'WATER BODY', '#0ea5e9',
+      'RIVER', '#0284c7',
+      'LOW LAND-CULTIVATION', '#7dd3fc',
+      'UPLAND-CULTIVATION', '#facc15',
+      'SCRUB LAND', '#d6d3d1',
+      'VILLAGE FOREST', '#14532d',
+      'SETTLEMENT', '#ef4444',
+      '#9ca3af'
+    ],
+
+    /* HEIGHT LOGIC (NEGATIVE → POSITIVE) */
+    'fill-extrusion-height': [
+      'match',
+      ['get', 'LAYER'],
+      'WATER BODY', -2,
+      'RIVER', -1.5,
+      'LOW LAND-CULTIVATION', 1,
+      'UPLAND-CULTIVATION', 3,
+      'SCRUB LAND', 0.8,
+      'VILLAGE FOREST', 2.5,
+      'SETTLEMENT', 0,
+      1
+    ],
+
+    'fill-extrusion-base': 0,
+    'fill-extrusion-opacity': 0.85
+  }
+});
+
+/* ===============================
+   LANDUSE HIGHLIGHT (VIOLET)
+   =============================== */
+map.addLayer({
+  id: 'landuse-highlight',
+  type: 'fill-extrusion',
+  source: 'feature-highlight',
+  filter: ['==', '$type', 'Polygon'],
+  paint: {
+    'fill-extrusion-color': '#8b5cf6',
+    'fill-extrusion-height': 4,
+    'fill-extrusion-opacity': 0.95
+  }
+});
+
+/* ===============================
+   LANDUSE CLICK + POPUP
+   =============================== */
+map.on('click', 'landuse-pick', (e) => {
+
+  // 🛑 ignore if landuse is OFF
+  if (map.getLayoutProperty('landuse-pick', 'visibility') !== 'visible') {
+    return;
+  }
+
+  const feature = e.features[0];
+
+  map.getSource('feature-highlight').setData({
+    type: 'FeatureCollection',
+    features: [feature]
   });
-}
-if (btn3D){
-  btn3D.addEventListener('click', () => {
-    set3DView();
+
+  new maplibregl.Popup({ offset: 10 })
+    .setLngLat(e.lngLat)
+    .setHTML(`
+      <div style="font-size:13px;">
+        <b>Present Landuse</b><br>
+        <b>Class:</b> ${feature.properties.LAYER}<br>
+        <b>Area (Ha):</b> ${Number(feature.properties.AREAHA).toFixed(2)}
+      </div>
+    `)
+    .addTo(map);
+});
+
+
+
+map.on('mouseenter', 'landuse-pick', () => {
+  map.getCanvas().style.cursor = 'pointer';
+});
+map.on('mouseleave', 'landuse-pick', () => {
+  map.getCanvas().style.cursor = '';
+});
+
+
+
+/* PARA (HOME SYMBOL) */
+map.loadImage(
+ 'https://img.icons8.com/ios-filled/50/0f4c81/home.png',
+ (e,img)=>{
+  map.addImage('home',img);
+  map.addSource('para',{
+    type:'geojson',
+    data:'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Location_Name.geojson'
   });
+  map.addLayer({
+    id:'para',
+    type:'symbol',
+    source:'para',
+    layout:{
+      'icon-image':'home',
+      'icon-size':0.8,
+      'text-field':['get','LAYER'],
+      'text-size':14,
+      'text-offset':[0,1.5],
+      'text-font':['Open Sans Bold']
+    },
+    paint:{
+      'text-color':'#0f4c81',
+      'text-halo-color':'#fff',
+      'text-halo-width':2
+    }
+  });
+  });
+  
+// 🔵 WORKING ICON
+map.loadImage(
+  'https://img.icons8.com/ios-filled/50/2563eb/marker.png',
+  (error, image) => {
+    if (error) throw error;
+    if (!map.hasImage('existing-working')) {
+      map.addImage('existing-working', image);
+    }
+  }
+);
+
+// 🔴 NOT WORKING ICON
+map.loadImage(
+  'https://img.icons8.com/ios-filled/50/ef4444/marker.png',
+  (error, image) => {
+    if (error) throw error;
+    if (!map.hasImage('existing-not-working')) {
+      map.addImage('existing-not-working', image);
+    }
+  }
+);
+
+function createHandPumpIcon(colorPipe) {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Platform
+  ctx.fillStyle = '#9ca3af';
+  ctx.beginPath();
+  ctx.ellipse(32, 54, 22, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vertical pipe
+  ctx.fillStyle = colorPipe;
+  ctx.fillRect(30, 20, 4, 30);
+
+  // Pump head
+  ctx.fillStyle = colorPipe;
+  ctx.fillRect(25, 16, 14, 6);
+
+  // Pivot
+  ctx.beginPath();
+  ctx.arc(26, 18, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Handle (LEFT)
+  ctx.save();
+  ctx.translate(26, 18);
+  ctx.rotate(18 * Math.PI / 180);
+  ctx.fillRect(-24, -1.5, 24, 3);
+  ctx.restore();
+
+  // Water outlet (RIGHT)
+  ctx.save();
+  ctx.translate(34, 24);
+  ctx.rotate(10 * Math.PI / 180);
+  ctx.fillRect(0, 0, 12, 3);
+  ctx.restore();
+
+  // Water drop
+  ctx.fillStyle = '#0ea5e9';
+  ctx.beginPath();
+  ctx.moveTo(46, 28);
+  ctx.bezierCurveTo(43, 32, 43, 36, 46, 38);
+  ctx.bezierCurveTo(49, 36, 49, 32, 46, 28);
+  ctx.fill();
+
+  return ctx.getImageData(0, 0, size, size);
 }
 
-// Measure button
-if (btnMeasure){
-  btnMeasure.addEventListener('click', () => {
-    toggleMeasure();
-  });
+// ✅ WORKING = GREY
+map.addImage(
+  'hand-pump-working',
+  createHandPumpIcon('#6b7280')
+);
+
+// ❌ NOT WORKING = RED
+map.addImage(
+  'hand-pump-not-working',
+  createHandPumpIcon('#dc2626')
+);
+
+
+function createSolarTankIcon() {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Solar panel
+  ctx.fillStyle = '#eab308';
+  ctx.fillRect(22, 2, 20, 8);
+  ctx.strokeStyle = '#78350f';
+  ctx.beginPath();
+  ctx.moveTo(22, 6);
+  ctx.lineTo(42, 6);
+  ctx.stroke();
+
+  // Tank top
+  ctx.fillStyle = '#0ea5e9';
+  ctx.beginPath();
+  ctx.ellipse(32, 16, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tank body
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillRect(22, 16, 20, 12);
+
+  // Tank bottom
+  ctx.fillStyle = '#0284c7';
+  ctx.beginPath();
+  ctx.ellipse(32, 28, 10, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tower legs
+  ctx.fillStyle = '#64748b';
+  ctx.fillRect(20, 28, 4, 26);
+  ctx.fillRect(40, 28, 4, 26);
+
+  // Cross braces
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(20, 32);
+  ctx.lineTo(44, 48);
+  ctx.moveTo(44, 32);
+  ctx.lineTo(20, 48);
+  ctx.stroke();
+
+  // Base
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(16, 54, 32, 4);
+
+  return ctx.getImageData(0, 0, size, size);
 }
 
-// Export button
-if (btnExport){
-  btnExport.addEventListener('click', () => {
-    exportMapWithPanelPNG();
+map.addImage('solar-tank-icon', createSolarTankIcon());
+
+function createStreetLightIcon(colorPole, colorLight, glow=true) {
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+
+  // Pole
+  ctx.fillStyle = colorPole;
+  ctx.fillRect(30, 10, 4, 44);
+
+  // Arm
+  ctx.fillRect(30, 12, 18, 3);
+
+  // Lamp head
+  ctx.fillStyle = colorLight;
+  ctx.beginPath();
+  ctx.arc(50, 14, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Glow (only for working)
+  if (glow) {
+    ctx.fillStyle = 'rgba(250,204,21,0.35)';
+    ctx.beginPath();
+    ctx.arc(50, 22, 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function createTransformerIcon() {
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+
+  // Body
+  ctx.fillStyle = '#64748b';
+  ctx.fillRect(18, 20, 28, 24);
+
+  // Top
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(20, 14, 24, 6);
+
+  // Lightning symbol
+  ctx.fillStyle = '#facc15';
+  ctx.beginPath();
+  ctx.moveTo(34, 22);
+  ctx.lineTo(28, 34);
+  ctx.lineTo(34, 34);
+  ctx.lineTo(26, 48);
+  ctx.lineTo(40, 32);
+  ctx.lineTo(32, 32);
+  ctx.closePath();
+  ctx.fill();
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function createTelecomTowerIcon() {
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+
+  // Tower legs
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(32, 8);
+  ctx.lineTo(18, 56);
+  ctx.moveTo(32, 8);
+  ctx.lineTo(46, 56);
+  ctx.stroke();
+
+  // Cross bars
+  ctx.lineWidth = 2;
+  [18, 26, 34, 42].forEach(y => {
+    ctx.beginPath();
+    ctx.moveTo(22, y);
+    ctx.lineTo(42, y);
+    ctx.stroke();
+  });
+
+  // Signal waves
+  ctx.strokeStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.arc(32, 10, 8, Math.PI * 1.25, Math.PI * 1.75);
+  ctx.arc(32, 10, 12, Math.PI * 1.25, Math.PI * 1.75);
+  ctx.stroke();
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function createPDSIcon() {
+  const s = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+
+  // Building
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(12, 24, 40, 28);
+
+  // Roof
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath();
+  ctx.moveTo(10, 24);
+  ctx.lineTo(32, 10);
+  ctx.lineTo(54, 24);
+  ctx.closePath();
+  ctx.fill();
+
+  // Grain boxes
+  ctx.fillStyle = '#fde68a';
+  ctx.fillRect(18, 36, 10, 10);
+  ctx.fillRect(32, 36, 10, 10);
+
+  return ctx.getImageData(0, 0, s, s);
+}
+
+function createPanchayatIcon() {
+  const s = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+
+  // ===== BASE BUILDING =====
+  ctx.fillStyle = '#334155';   // dark govt grey
+  ctx.fillRect(10, 26, 44, 30);
+
+  // ===== ROOF =====
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.moveTo(8, 26);
+  ctx.lineTo(32, 12);
+  ctx.lineTo(56, 26);
+  ctx.closePath();
+  ctx.fill();
+
+  // ===== COLUMNS (BOLD) =====
+  ctx.fillStyle = '#e5e7eb';
+  [16, 26, 36, 46].forEach(x => {
+    ctx.fillRect(x, 30, 4, 22);
+  });
+
+  // ===== FLAG POLE =====
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(48, 6, 2, 20);
+
+  // ===== INDIAN FLAG =====
+  ctx.fillStyle = '#f97316'; // saffron
+  ctx.fillRect(50, 6, 10, 4);
+
+  ctx.fillStyle = '#ffffff'; // white
+  ctx.fillRect(50, 10, 10, 4);
+
+  ctx.fillStyle = '#16a34a'; // green
+  ctx.fillRect(50, 14, 10, 4);
+
+  return ctx.getImageData(0, 0, s, s);
+}
+
+
+function createBankIcon() {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // ===== ROOF =====
+  ctx.fillStyle = '#0f4c81'; // NMDC blue
+  ctx.beginPath();
+  ctx.moveTo(12, 18);
+  ctx.lineTo(32, 6);
+  ctx.lineTo(52, 18);
+  ctx.closePath();
+  ctx.fill();
+
+  // ===== BANK BODY =====
+  ctx.fillStyle = '#1e3a8a';
+  ctx.fillRect(16, 18, 32, 26);
+
+  // ===== PILLARS =====
+  ctx.fillStyle = '#ffffff';
+  [20, 26, 32, 38].forEach(x => {
+    ctx.fillRect(x, 22, 2.5, 18);
+  });
+
+  // ===== BASE =====
+  ctx.fillStyle = '#0f4c81';
+  ctx.fillRect(14, 44, 36, 4);
+
+  // ===== ₹ SYMBOL (BIG & CENTERED) =====
+  ctx.fillStyle = '#fde047';          // gold
+  ctx.font = 'bold 20px Arial';       // 🔥 BIG
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // shadow for clarity
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 4;
+
+  ctx.fillText('₹', 32, 32);
+
+  ctx.shadowBlur = 0;
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function createTempleIcon() {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // ===== BASE PLATFORM =====
+  ctx.fillStyle = '#7c2d12'; // temple stone
+  ctx.fillRect(16, 44, 32, 6);
+
+  // ===== MAIN BODY =====
+  ctx.fillStyle = '#f59e0b'; // saffron
+  ctx.fillRect(20, 26, 24, 18);
+
+  // ===== SHIKHARA (TOP TOWER) =====
+  ctx.fillStyle = '#ea580c';
+  ctx.beginPath();
+  ctx.moveTo(32, 8);
+  ctx.lineTo(22, 26);
+  ctx.lineTo(42, 26);
+  ctx.closePath();
+  ctx.fill();
+
+  // ===== KALASH (TOP DOT) =====
+  ctx.fillStyle = '#fde047'; // gold
+  ctx.beginPath();
+  ctx.arc(32, 6, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ===== DOOR =====
+  ctx.fillStyle = '#1f2937';
+  ctx.fillRect(30, 34, 4, 10);
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function createAnganwadiIcon() {
+  const s = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+
+  // Building base
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(12, 28, 40, 24);
+
+  // Roof
+  ctx.fillStyle = '#b45309';
+  ctx.beginPath();
+  ctx.moveTo(10, 28);
+  ctx.lineTo(32, 14);
+  ctx.lineTo(54, 28);
+  ctx.closePath();
+  ctx.fill();
+
+  // Door
+  ctx.fillStyle = '#1f2937';
+  ctx.fillRect(30, 38, 6, 14);
+
+  // Child symbol
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.arc(32, 30, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillRect(30, 34, 4, 6);
+
+  return ctx.getImageData(0, 0, s, s);
+}
+
+function createSchoolIcon() {
+  const s = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+
+  // Main building
+  ctx.fillStyle = '#1e40af';
+  ctx.fillRect(12, 24, 40, 28);
+
+  // Roof
+  ctx.fillStyle = '#1e3a8a';
+  ctx.beginPath();
+  ctx.moveTo(10, 24);
+  ctx.lineTo(32, 10);
+  ctx.lineTo(54, 24);
+  ctx.closePath();
+  ctx.fill();
+
+  // Windows
+  ctx.fillStyle = '#e5e7eb';
+  [18, 30, 42].forEach(x => {
+    ctx.fillRect(x, 30, 6, 8);
+  });
+
+  // Door
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(30, 40, 6, 12);
+
+  return ctx.getImageData(0, 0, s, s);
+}
+
+function createLibraryIcon() {
+  const size = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+
+  // ===== BASE PLATFORM =====
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(12, 50, 40, 6);
+
+  // ===== BUILDING BODY =====
+  ctx.fillStyle = '#1e40af'; // govt blue
+  ctx.fillRect(14, 22, 36, 28);
+
+  // ===== ROOF =====
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.moveTo(10, 22);
+  ctx.lineTo(32, 10);
+  ctx.lineTo(54, 22);
+  ctx.closePath();
+  ctx.fill();
+
+  // ===== BOOK SHELF INSIDE =====
+  ctx.fillStyle = '#fde047'; // yellow books
+  ctx.fillRect(20, 30, 4, 14);
+  ctx.fillRect(26, 30, 4, 14);
+  ctx.fillRect(32, 30, 4, 14);
+  ctx.fillRect(38, 30, 4, 14);
+
+  // ===== CENTRAL BOOK SYMBOL =====
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(32, 30);
+  ctx.lineTo(32, 44);
+  ctx.stroke();
+
+  // ===== DOOR =====
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(30, 38, 4, 12);
+
+  return ctx.getImageData(0, 0, size, size);
+}
+
+
+function createCommunityHallIcon() {
+  const s = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+
+  // Hall building
+  ctx.fillStyle = '#065f46';
+  ctx.fillRect(12, 28, 40, 24);
+
+  // Roof
+  ctx.fillStyle = '#064e3b';
+  ctx.beginPath();
+  ctx.moveTo(10, 28);
+  ctx.lineTo(32, 14);
+  ctx.lineTo(54, 28);
+  ctx.closePath();
+  ctx.fill();
+
+  // People symbols
+  ctx.fillStyle = '#facc15';
+  [24, 32, 40].forEach(x => {
+    ctx.beginPath();
+    ctx.arc(x, 36, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  return ctx.getImageData(0, 0, s, s);
+}
+
+
+function drawLegendIcon(canvasId, imageData) {
+  const c = document.getElementById(canvasId);
+  if (!c) return;
+
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // create temp canvas from ImageData
+  const temp = document.createElement('canvas');
+  temp.width = imageData.width;
+  temp.height = imageData.height;
+  temp.getContext('2d').putImageData(imageData, 0, 0);
+
+  // scale & center icon
+  const targetSize = 32; // 🔥 controls icon balance
+  const offset = (c.width - targetSize) / 2;
+
+  ctx.drawImage(
+    temp,
+    offset,
+    offset,
+    targetSize,
+    targetSize
+  );
+}
+
+
+
+
+
+// 💡 STREET LIGHT – WORKING (YELLOW LIGHT)
+map.addImage(
+  'street-light-working',
+  createStreetLightIcon('#475569', '#facc15', true)
+);
+
+// ❌ STREET LIGHT – NOT WORKING (RED, NO GLOW)
+map.addImage(
+  'street-light-not-working',
+  createStreetLightIcon('#dc2626', '#dc2626', false)
+);
+
+map.addImage('transformer-icon', createTransformerIcon());
+map.addImage('telecom-tower-icon', createTelecomTowerIcon());
+map.addImage('pds-icon', createPDSIcon(), { pixelRatio: 2 });
+map.addImage('panchayat-icon', createPanchayatIcon(), { pixelRatio: 2 });
+map.addImage('bank-icon', createBankIcon(), { pixelRatio: 2 });
+map.addImage('temple-icon', createTempleIcon());
+map.addImage('anganwadi-icon', createAnganwadiIcon(), { pixelRatio: 2 });
+map.addImage('school-icon', createSchoolIcon(), { pixelRatio: 2 });
+map.addImage('library-icon', createLibraryIcon(), { pixelRatio: 2 });
+map.addImage('community-icon', createCommunityHallIcon(), { pixelRatio: 2 });
+
+
+
+
+
+map.addSource('existing-assets', {
+  type: 'geojson',
+  data: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Existing_Assets.geojson'
+});
+
+map.addLayer({
+  id: 'existing-assets-icon',
+  type: 'symbol',
+  source: 'existing-assets',
+  layout: {
+    visibility: 'none',
+
+   'icon-image': [
+  'case',
+
+  // ☀️ SOLAR WATER TANK
+  ['in', 'SOLAR', ['upcase', ['get', 'DESCRIPTIO']]],
+  'solar-tank-icon',
+
+// ❌ STREET / SREET LIGHT – NOT WORKING
+[
+  'all',
+  [
+    'any',
+    ['in', 'STREET', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'SREET',  ['upcase', ['get', 'DESCRIPTIO']]]
+  ],
+  ['in', 'NOT', ['upcase', ['get', 'DESCRIPTIO']]]
+],
+'street-light-not-working',
+
+// 💡 STREET / SREET LIGHT – WORKING
+[
+  'any',
+  ['in', 'STREET', ['upcase', ['get', 'DESCRIPTIO']]],
+  ['in', 'SREET',  ['upcase', ['get', 'DESCRIPTIO']]]
+],
+'street-light-working',
+
+
+  // ⚡ TRANSFORMER
+  ['in', 'TRANSFORMER', ['upcase', ['get', 'DESCRIPTIO']]],
+  'transformer-icon',
+
+  // 📡 TELEPHONE / MOBILE TOWER
+  ['any',
+    ['in', 'TELEPHONE', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'MOBILE', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'TOWER', ['upcase', ['get', 'DESCRIPTIO']]]
+  ],
+  'telecom-tower-icon',
+  
+  // 🏪 PDS
+['in', 'PDS', ['upcase', ['get', 'DESCRIPTIO']]],
+'pds-icon',
+
+// 🏛 PANCHAYAT
+['in', 'PANCHAYAT', ['upcase', ['get', 'DESCRIPTIO']]],
+'panchayat-icon',
+
+// 🏦 BANK
+['in', 'BANK', ['upcase', ['get', 'DESCRIPTIO']]],
+'bank-icon',
+
+  // 🛕 HINDU TEMPLE (DEVA GUDI + TEMPLE)
+  [
+    'any',
+    ['in', 'DEVA', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'TEMPLE', ['upcase', ['get', 'DESCRIPTIO']]]
+  ],
+  'temple-icon',
+
+
+  // ❌ HAND PUMP / TUBE WELL – NOT WORKING
+  [
+    'all',
+    ['in', 'TUBE', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'NOT', ['upcase', ['get', 'DESCRIPTIO']]]
+  ],
+  'hand-pump-not-working',
+
+  // ✅ HAND PUMP / TUBE WELL – WORKING
+  ['in', 'TUBE', ['upcase', ['get', 'DESCRIPTIO']]],
+  'hand-pump-working',
+  /* 🧒 ANGANWADI */
+  ['in', 'ANGANWADI', ['upcase', ['get', 'DESCRIPTIO']]],
+  'anganwadi-icon',
+
+  /* 🏫 SCHOOL */
+  ['in', 'SCHOOL', ['upcase', ['get', 'DESCRIPTIO']]],
+  'school-icon',
+
+  /* 📚 LIBRARY */
+  ['in', 'LIBRARY', ['upcase', ['get', 'DESCRIPTIO']]],
+  'library-icon',
+
+  /* 🏘️ COMMUNITY HALL */
+  [
+    'any',
+    ['in', 'COMMUNITY HALL', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'COMMUNITY', ['upcase', ['get', 'DESCRIPTIO']]]
+  ],
+  'community-icon',
+
+  // fallback
+  'existing-working'
+],
+
+
+    'icon-size': [
+  'case',
+
+  // 🏛 Institutional & Services → BIGGER
+  ['in', ['get', 'CATEGORY'], ['literal', [
+    'Institutional & Public Services'
+  ]]],
+  2.0,   // 👈 BIG SIZE (Bank, Panchayat, PDS)
+
+  // 🔹 All others → normal
+  1.1
+],
+
+'icon-size': [
+  'case',
+
+  // Bigger for buildings
+  ['any',
+    ['in', 'SCHOOL', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'ANGANWADI', ['upcase', ['get', 'DESCRIPTIO']]],
+	['in', 'LIBRARY', ['upcase', ['get', 'DESCRIPTIO']]],
+    ['in', 'COMMUNITY', ['upcase', ['get', 'DESCRIPTIO']]]
+  ],
+ 2.0,
+
+  // Normal
+  1.2
+],
+
+
+    'icon-allow-overlap': true,
+    'icon-ignore-placement': true
+  }
+});
+
+
+
+
+map.addLayer({
+  id: 'existing-assets-label',
+  type: 'symbol',
+  source: 'existing-assets',
+
+  layout: {
+    visibility: 'none',
+
+    'text-field': ['get', 'DESCRIPTIO'],
+
+    // 🔥 TEXT SIZE SCALES WITH ZOOM
+    'text-size': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      12, 9,     // zoom 12 → small
+      15, 11,    // zoom 15 → normal
+      18, 13     // zoom 18 → large
+    ],
+
+    // 🔥 OFFSET ADJUSTS WITH ZOOM
+    'text-offset': [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      12, ['literal', [0, 1.2]],
+      15, ['literal', [0, 1.6]],
+      18, ['literal', [0, 2.0]]
+    ],
+
+    'text-anchor': 'top',
+    'text-allow-overlap': true,
+    'text-ignore-placement': false
+  },
+
+  paint: {
+    'text-color': '#0f172a',
+    'text-halo-color': '#ffffff',
+    'text-halo-width': 2
+  }
+});
+
+
+
+
+
+/* ===============================
+   EXISTING ASSETS – CLICK POPUP
+   =============================== */
+
+// 🔥 Click on ICON layer
+map.on('click', 'existing-assets-icon', (e) => {
+
+  const f = e.features[0];
+  const desc = f.properties.DESCRIPTIO;
+
+  const status = desc.toUpperCase().includes('NOT WORKING')
+    ? '❌ Not Working'
+    : '✅ Working';
+
+  new maplibregl.Popup({ offset: 10 })
+    .setLngLat(f.geometry.coordinates)
+    .setHTML(`
+      <div style="font-size:13px;">
+        <b>Existing Asset</b><br/>
+        ${desc}<br/>
+        <b>Status:</b> ${status}
+      </div>
+    `)
+    .addTo(map);
+});
+
+// 🔥 Click on LABEL layer (important)
+map.on('click', 'existing-assets-label', (e) => {
+
+  const f = e.features[0];
+  const desc = f.properties.DESCRIPTIO;
+
+  const status = desc.toUpperCase().includes('NOT WORKING')
+    ? '❌ Not Working'
+    : '✅ Working';
+
+  new maplibregl.Popup({ offset: 10 })
+    .setLngLat(f.geometry.coordinates)
+    .setHTML(`
+      <div style="font-size:13px;">
+        <b>Existing Asset</b><br/>
+        ${desc}<br/>
+        <b>Status:</b> ${status}
+      </div>
+    `)
+    .addTo(map);
+});
+
+/* ===============================
+   CURSOR CHANGE (ICON + LABEL)
+   =============================== */
+
+['existing-assets-icon', 'existing-assets-label'].forEach(layer => {
+
+  map.on('mouseenter', layer, () => {
+    map.getCanvas().style.cursor = 'pointer';
+  });
+
+  map.on('mouseleave', layer, () => {
+    map.getCanvas().style.cursor = '';
+  });
+
+});
+
+
+
+/* PROPOSED ASSETS – COLORED AS PER ACTUAL LAYER VALUES */
+map.addSource('points',{
+  type:'geojson',
+  data:'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Points.geojson'
+});
+
+map.addLayer({
+  id: 'points',
+  type: 'circle',
+  source: 'points',
+  paint: {
+
+    'circle-radius': 6,
+    'circle-stroke-color': '#ffffff',
+    'circle-stroke-width': 1.2,
+
+    // 🔥 CATEGORY-BASED COLORING
+    'circle-color': [
+      'case',
+
+      // 🟦 Social Infrastructure
+      ['in', ['get', 'LAYER'], ['literal', [
+        'ANGANWADI BUILDING',
+        'HANDWASHING PLATFORM',
+        'MULTILINGUAL AIDS',
+        'TOILET REFURBISHING',
+        'COMMUNITY HALL',
+        'MANDAP',
+        'DOME SHED',
+        'TOILETS'
+      ]]],
+      '#2563eb',
+
+      // 🟧 Transport Infrastructure
+      ['in', ['get', 'LAYER'], ['literal', [
+        'BRIDGE',
+        'CULVERT'
+      ]]],
+      '#f97316',
+
+      // 🟩 Natural Resource Management
+      ['in', ['get', 'LAYER'], ['literal', [
+        'CHECKDAM',
+        'POND RENNOVATION',
+        'WHS',
+        'LBCD'
+      ]]],
+      '#16a34a',
+
+      // 🟦 Drinking Water Infrastructure
+      ['in', ['get', 'LAYER'], ['literal', [
+        'SOLAR WATERTANK'
+      ]]],
+      '#0ea5e9',
+
+      // 🟨 Energy & Lighting
+      ['in', ['get', 'LAYER'], ['literal', [
+        'STREETLIGHTS',
+        'HIGH MUST LIGHT'
+      ]]],
+      '#eab308',
+
+      // 🟪 Economic Infrastructure
+      ['in', ['get', 'LAYER'], ['literal', [
+        'MARKET COMPLEX'
+      ]]],
+      '#7c3aed',
+
+      // 🔘 Default (fallback)
+      '#64748b'
+    ]
+  }
+});
+
+
+
+
+map.on('sourcedata', (e) => {
+  if (e.sourceId === 'points' && map.isSourceLoaded('points')) {
+    const src = map.getSource('points');
+    if (src && src._data && !allAssetsData) {
+      allAssetsData = src._data;
+      renderTable(getDefaultTableData());
+    }
+  }
+});
+
+
+
+map.addLayer({
+  id:'asset-labels',
+  type:'symbol',
+  source:'points',
+  layout:{
+    'text-field':['get','LAYER'],
+    'text-size':11,
+    'text-offset':[0,1.4]
+  },
+  paint:{
+    'text-color':'#111827',
+    'text-halo-color':'#ffffff',
+    'text-halo-width':2
+  }
+});
+
+
+/* PROPOSED ROADS */
+map.addSource('roads-src',{
+ type:'geojson',
+ data:'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Lines.geojson'
+});
+/* BT ROADS */
+map.addLayer({
+  id: 'roads-bt',
+  type: 'line',
+  source: 'roads-src',
+  filter: ['==', ['get', 'LAYER'], 'BT ROAD'],
+  paint: {
+    'line-color': '#7c3aed',
+    'line-width': 5
+  }
+});
+
+/* CC ROADS */
+map.addLayer({
+  id: 'roads-cc',
+  type: 'line',
+  source: 'roads-src',
+  filter: ['==', ['get', 'LAYER'], 'CC ROAD'],
+  paint: {
+    'line-color': '#22c55e',
+    'line-width': 4
+  }
+});
+
+/* =======================
+   3D BOUNDARY WALL (LINE → POLYGON → EXTRUSION)
+   ======================= */
+
+fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Lines.geojson')
+  .then(r => r.json())
+  .then(data => {
+
+    // 1️⃣ Filter only boundary wall lines
+    const wallLines = data.features.filter(
+      f => f.properties.LAYER === 'BOUNDARY WALL'
+    );
+
+    // 2️⃣ Convert line → thin polygon (0.3m thickness)
+    const wallPolygons = wallLines.map(f =>
+      turf.buffer(f, 0.15, { units: 'meters' })
+    );
+
+    // 3️⃣ Add polygon source
+    map.addSource('wall-3d', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: wallPolygons
+      }
+    });
+
+    // 4️⃣ Add 3D extrusion layer
+    map.addLayer({
+  id: 'wall-3d',
+  type: 'fill-extrusion',
+  source: 'wall-3d',
+  minzoom: 15,
+  layout: {
+    visibility: 'none'   // 🔥 THIS IS THE KEY FIX
+  },
+  paint: {
+    'fill-extrusion-color': '#6b7280',
+    'fill-extrusion-height': 2.5,
+    'fill-extrusion-base': 0,
+    'fill-extrusion-opacity': 0.9
+  }
+});
+	
+	map.addLayer({
+  id: 'feature-highlight-wall',
+  type: 'fill-extrusion',
+  source: 'feature-highlight',
+  layout: {
+    visibility: 'none'
+  },
+  filter: ['==', '$type', 'Polygon'],
+  paint: {
+    'fill-extrusion-color': '#ff0000',
+    'fill-extrusion-height': 3,
+    'fill-extrusion-base': 0,
+    'fill-extrusion-opacity': 0.9
+  }
+});
+
+
+/* NMDC WORK COMPLETED */
+map.addSource('existing-csr', {
+  type: 'geojson',
+  data: 'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/NMDC_EXISTING_CSR_WORK.geojson'
+});
+
+
+map.addLayer({
+  id: 'csr-buildings-3d',
+  type: 'fill-extrusion',
+  source: 'existing-csr',
+  filter: ['==', ['get', 'LAYER'], 'BUILDING'],
+  paint: {
+    'fill-extrusion-color': '#2563eb',
+    'fill-extrusion-height': 10,
+    'fill-extrusion-base': 0,
+    'fill-extrusion-opacity': 0.85
+  }
+});
+
+map.addLayer({
+  id: 'csr-ccroad-3d',
+  type: 'fill-extrusion',
+  source: 'existing-csr',
+  filter: ['==', ['get', 'LAYER'], 'CC ROAD'],
+  paint: {
+    'fill-extrusion-color': '#9ca3af',
+    'fill-extrusion-height': 1.8,
+    'fill-extrusion-base': 0,
+    'fill-extrusion-opacity': 0.9
+  }
+});
+
+map.loadImage(
+  'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/NMDCLOGO.png',
+  (e, img) => {
+    if (!map.hasImage('nmdc-logo')) {
+      map.addImage('nmdc-logo', img, { pixelRatio: 2 });
+    }
+  }
+);
+
+map.addLayer({
+  id: 'csr-labels',
+  type: 'symbol',
+  source: 'existing-csr',
+  layout: {
+    'icon-image': 'nmdc-logo',
+    'icon-size': 0.35,
+    'icon-offset': [0, -12],
+
+    'text-field': [
+      'concat',
+      'CSR – ',
+      ['get', 'NAME']
+    ],
+    'text-size': 12,
+    'text-offset': [0, 1.4],
+    'text-anchor': 'top',
+    'text-allow-overlap': true
+  },
+  paint: {
+    'text-color': '#0f4c81',
+    'text-halo-color': '#ffffff',
+    'text-halo-width': 2
+  }
+});
+
+  // ===============================
+  // ✅ ADD POPUPS (THIS IS THE PLACE)
+  // ===============================
+  addCSRPopup('csr-buildings-3d');
+  addCSRPopup('csr-ccroad-3d');
+  addCSRPhotoPopup('csr-buildings-3d');
+addCSRPhotoPopup('csr-ccroad-3d');
+  
+  
+  
+
+
+
+	
+	/* PROPOSED DRAIN */
+map.addSource('drain-src',{
+ type:'geojson',
+ data:'https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Drainage_Lines.geojson'
+});
+map.addLayer({
+ id:'drain',
+ type:'line',
+ source:'drain-src',
+ layout: {
+   visibility: 'none'   // 🔥 DEFAULT OFF
+ },
+ paint:{
+   'line-color':'#0284c7',
+   'line-width':2
+ }
+});
+applyInitialMapState();
+
+
+
+}); // ✅ CLOSE map.on('load')
+
+function applyInitialMapState() {
+
+  const ON = ['boundary', 'csr-buildings-3d', 'csr-ccroad-3d', 'csr-labels'];
+
+  const OFF = [
+    'points',
+    'asset-labels',
+    'roads-bt',
+    'roads-cc',
+    'wall-3d',
+    'drain',
+    'existing-assets-icon',
+    'existing-assets-label',
+    'landuse-3d',
+    'landuse-pick'
+  ];
+
+  ON.forEach(id => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', 'visible');
+    }
+  });
+
+  OFF.forEach(id => {
+    if (map.getLayer(id)) {
+      map.setLayoutProperty(id, 'visibility', 'none');
+    }
+  });
+
+  syncLayerPanelCheckboxes();
+}
+
+function syncLayerPanelCheckboxes() {
+
+  document
+    .querySelectorAll('#layerPanel input[type="checkbox"]')
+    .forEach(cb => {
+
+      const fn = cb.getAttribute('onchange') || '';
+
+      if (fn.includes("toggle('boundary'")) cb.checked = true;
+      else if (fn.includes('toggleAllCSR')) cb.checked = true;
+      else cb.checked = false;
+    });
+}
+
+  
+const CSR_ASSETS = {
+  bank: {
+    name: 'Indian Overseas Bank – Community Hall',
+    center: [81.3139771558, 18.6058387257],
+    geometry: {
+      type: 'Point',
+      coordinates: [81.3139771558, 18.6058387257]
+    }
+  },
+
+  anganwadi: {
+    name: 'Anganwadi Centre – Patel Para',
+    center: [81.312659257, 18.6066494816],
+    geometry: {
+      type: 'Point',
+      coordinates: [81.312659257, 18.6066494816]
+    }
+  },
+
+  kitchen: {
+    name: 'Anganwadi Kitchen – Vichha Para',
+    center: [81.3053881561, 18.6036578765],
+    geometry: {
+      type: 'Point',
+      coordinates: [81.3053881561, 18.6036578765]
+    }
+  },
+
+  ccroad: {
+    name: 'CC Road – Sarpanch Para',
+    center: [81.3153714383, 18.6054242084],
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [81.31510, 18.60520],
+        [81.31537, 18.60542],
+        [81.31560, 18.60560]
+      ]
+    }
+  }
+};
+
+// =========================================
+// STEP-B: CSR ASSET HIGHLIGHT FUNCTION
+// =========================================
+function highlightAsset(assetKey) {
+  const asset = CSR_ASSETS[assetKey];
+
+  if (!asset || !map.getSource('feature-highlight')) return;
+
+  map.getSource('feature-highlight').setData({
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      geometry: asset.geometry,
+      properties: { name: asset.name }
+    }]
   });
 }
+  
+  // =========================================
+// 🎥 AUTO CSR FLY-THROUGH ON LOAD
+// =========================================
+
+
+
+/* LOAD ASSET DATA FOR TABLE & FILTER (FILE:// SAFE) */
+fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Points.geojson')
+  .then(r => r.json())
+  .then(data => {
+    allAssetsData = data;
+  assetsLoaded = true;
+  if(roadsLoaded) renderTable(getDefaultTableData());
+});
+
+
+map.on('click', 'points', (e) => {
+  const feature = e.features[0];
+
+  highlightCleanFeature(feature);
+
+
+  new maplibregl.Popup({ offset: 10 })
+    .setLngLat(e.lngLat)
+    .setHTML(`
+      <div style="font-size:13px;">
+        <b>Proposed Activity</b><br/>
+        ${feature.properties.NAME || 'N/A'}
+      </div>
+    `)
+    .addTo(map);
+});
+fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Lines.geojson')
+  .then(r => r.json())
+  .then(data => {
+    allRoadsData = data;
+  roadsLoaded = true;
+  if(assetsLoaded) renderTable(getDefaultTableData());
+});
+
+// Change cursor on hover (roads)
+['roads-bt','roads-cc','wall-3d'].forEach(layer=>{
+  map.on('mouseenter', layer, ()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave', layer, ()=>map.getCanvas().style.cursor='');
+}); // ✅ THIS WAS MISSING
+
+// Change cursor on hover (point assets)
+['points', 'asset-labels'].forEach(layer => {
+
+  map.on('mouseenter', layer, () => {
+    map.getCanvas().style.cursor = 'pointer';
+  });
+
+  map.on('mouseleave', layer, () => {
+    map.getCanvas().style.cursor = '';
+  });
+
+});
+
+/* ---------- UPDATE DONUT (CALLED FROM BUTTONS) ---------- */
+window.updateDonutByCategory = function(category, features) {
+
+  if (!infraChart) return;
+
+  donutMode = 'count';
+
+  // 1️⃣ Asset types under this category
+  const assetTypes = CATEGORY_ASSET_MAP[category];
+
+  // 2️⃣ Count each asset type
+  const counts = buildAssetTypeCounts(features, assetTypes);
+
+  // 3️⃣ Update donut to ASSET-LEVEL
+  infraChart.data.labels = assetTypes;
+  infraChart.data.datasets[0].data =
+    assetTypes.map(t => counts[t]);
+
+  infraChart.update();
+};
+
+
+
+window.toggleCategory = function(category){
+donutMode = 'count';
+
+
+
+
+  // 1️⃣ Hide everything
+  hideAllMapLayers();
+
+  // 2️⃣ Find asset types for this category
+  const allowedTypes = Object.keys(infraCategoryMap)
+    .filter(k => infraCategoryMap[k] === category);
+
+  // 3️⃣ Apply MAP FILTER (IMPORTANT)
+  const filterExpr = ['in', ['get','LAYER'], ['literal', allowedTypes]];
+
+  map.setFilter('points', filterExpr);
+  map.setFilter('asset-labels', filterExpr);
+
+  // 4️⃣ Show asset points
+  map.setLayoutProperty('points','visibility','visible');
+  map.setLayoutProperty('asset-labels','visibility','visible');
+
+  // 🔵 SOCIAL → SHOW BOUNDARY WALL
+  if (category === 'Social Infrastructure') {
+    if (map.getLayer('wall-3d')) {
+      map.setLayoutProperty('wall-3d','visibility','visible');
+    }
+  }
+
+  // 🟢 NRM → SHOW DRAINAGE
+  if (category === 'Natural Resource Management') {
+    if (map.getLayer('drain')) {
+      map.setLayoutProperty('drain','visibility','visible');
+    }
+  }
+
+  // 5️⃣ TABLE (ONLY POINT ASSETS)
+  const filtered = allAssetsData.features.filter(f =>
+    allowedTypes.includes(f.properties.LAYER)
+  );
+  renderTable(filtered);
+
+  // 6️⃣ KPIs
+ hideKPIs();      // ❌ KPIs off
+showDonut();    // ✅ Donut on
+hideKpiHeader();
+
+
+updateKPIs(filtered);
+updateDonutByCategory(category, filtered);
+
+
+
+
+  // 7️⃣ Button UI
+  setActiveButton(category);
+};
+
+/* ---------- RESET DONUT (FULL DATA) ---------- */
+window.resetDonut = function() {
+
+  if (!infraChart || !allAssetsData) return;
+
+  donutMode = 'percent';
+
+  const counts =
+    buildCountsFromCategoryAssetMap(allAssetsData.features);
+
+  infraChart.data.labels = Object.keys(CATEGORY_ASSET_MAP);
+  infraChart.data.datasets[0].data =
+    Object.keys(CATEGORY_ASSET_MAP).map(c => counts[c]);
+
+  infraChart.update();
+};
+
+
+donutMode = 'percent';
+
+
+
+/* ===== CLICK HIGHLIGHT FOR ROADS & WALL (FINAL) ===== */
+
+['roads-bt','roads-cc','wall-3d'].forEach(layer => {
+
+  map.on('click', layer, (e) => {
+
+    const feature = e.features[0];
+    const props = feature.properties;
+
+    map.getSource('feature-highlight').setData({
+      type: 'FeatureCollection',
+      features: [feature]
+    });
+
+    const lengthKm = props.Shape_Leng
+      ? (props.Shape_Leng / 1000).toFixed(2)
+      : 'N/A';
+
+    new maplibregl.Popup({ offset: 10 })
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <div style="font-size:13px;">
+          <b>Proposed Road</b><br/>
+          <b>Type:</b> ${props.LAYER}<br/>
+          <b>Name:</b> ${props.NAME || 'N/A'}<br/>
+          <b>Length:</b> ${lengthKm} km
+        </div>
+      `)
+      .addTo(map);
+
+  });
+
+}); // ✅ THIS LINE FIXES THE ERROR
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* DASHBOARD DATA */
+Promise.all([
+ fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Points.geojson').then(r=>r.json()),
+ fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Samalwar_Lines.geojson').then(r=>r.json()),
+ fetch('https://raw.githubusercontent.com/hemanya2003/NMDC-Chattisgarh/main/Drainage_Lines.geojson').then(r=>r.json())
+]).then(([p,r,d])=>{
+ let assetCounts={},types=new Set(),
+    assets=0,bt=0,cc=0,boundaryLen=0,drainLen=0;
+
+
+ p.features.forEach(f=>{
+  assets++;
+  types.add(f.properties.LAYER);
+  assetCounts[f.properties.LAYER]=(assetCounts[f.properties.LAYER]||0)+1;
+ });
+ 
+
+
+ 
+ /* ===== PROPOSED INFRASTRUCTURE CATEGORY DISTRIBUTION ===== */
+
+
+// INITIALIZE COUNTS
+let infraCategoryCounts = {
+  "Social Infrastructure": 0,
+  "Transport Infrastructure": 0,
+  "Natural Resource Management": 0,
+  "Drinking Water Infrastructure": 0,
+  "Energy & Lighting": 0,
+  "Economic Infrastructure": 0
+};
+
+// COUNT POINT FEATURES INTO CATEGORIES
+p.features.forEach(f => {
+  const assetType = f.properties.LAYER;
+  const category = infraCategoryMap[assetType];
+  if (category) {
+    infraCategoryCounts[category]++;
+  }
+});
+
+
+r.features.forEach(f=>{
+  const len = f.properties.Shape_Leng / 1000;
+
+  if (f.properties.LAYER === 'BT ROAD') bt += len;
+  if (f.properties.LAYER === 'CC ROAD') cc += len;
+  if (f.properties.LAYER === 'BOUNDARY WALL') boundaryLen += len;
+});
+
+
+ d.features.forEach(f=>drainLen+=f.properties.Shape_Leng/1000);
+
+ kpiAssets.innerText=assets;
+const usedCategories = Object.values(infraCategoryCounts)
+  .filter(count => count > 0).length;
+
+kpiTypes.innerText = usedCategories;
+
+kpiBT.innerText = bt.toFixed(2);
+kpiCC.innerText = cc.toFixed(2);
+kpiBoundary.innerText = boundaryLen.toFixed(2);
+
+
+
+
+/* ===== FINAL DONUT WITH FULL LEGEND + CLICK PERCENT ===== */
+
+const infraLabels = [
+  "Social Infrastructure",
+  "Transport Infrastructure",
+  "Natural Resource Management",
+  "Drinking Water Infrastructure",
+  "Energy & Lighting",
+  "Economic Infrastructure"
+];
+
+const infraValues = infraLabels.map(l => infraCategoryCounts[l] || 0);
+
+
+
+/* =========================================================
+   FINAL CHART INITIALIZATION BLOCK (COPY–PASTE)
+   ========================================================= */
+
+
+
+/* ---------- BUILD DONUT DATA ---------- */
+function buildInfraCategoryCounts(features){
+  let counts = {};
+  ALL_INFRA_CATEGORIES.forEach(c => counts[c] = 0);
+
+  features.forEach(f => {
+    const cat = infraCategoryMap[f.properties.LAYER];
+    if (cat) counts[cat]++;
+  });
+
+  return counts;
+}
+
+/* ---------- CREATE DONUT ONCE ---------- */
+const initialCounts = buildCountsFromCategoryAssetMap(p.features);
+
+infraChart = new Chart(
+  document.getElementById('assetChart'),
+  {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(CATEGORY_ASSET_MAP),
+      datasets: [{
+        data: Object.keys(CATEGORY_ASSET_MAP).map(
+          c => initialCounts[c]
+        ),
+        backgroundColor: [
+          '#2563eb', // Social
+          '#f97316', // Transport
+          '#16a34a', // NRM
+          '#0ea5e9', // Drinking Water
+          '#eab308', // Energy
+          '#7c3aed'  // Economic
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '50%',
+      plugins: {
+legend: {
+  position: 'bottom',
+  labels: {
+    generateLabels: (chart) => {
+      const data = chart.data;
+      const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+
+      return data.labels.map((label, i) => {
+        const value = data.datasets[0].data[i];
+        const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+
+        return {
+          text:
+            donutMode === 'count'
+              ? `${label} — ${value}`
+              : `${label} — ${percent}%`,
+          fillStyle: data.datasets[0].backgroundColor[i],
+          strokeStyle: data.datasets[0].backgroundColor[i],
+          index: i
+        };
+      });
+    }
+  }
+},
+
+
+
+datalabels: {
+  formatter: (value, ctx) => {
+    const data = ctx.chart.data.datasets[0].data;
+    const total = data.reduce((a, b) => a + b, 0);
+    const percent = (value / total) * 100;
+
+    // 🔵 CATEGORY MODE → COUNT ONLY
+    if (donutMode === 'count') {
+      return value;
+    }
+
+    // 🔵 DEFAULT MODE → % ONLY IF >= 3%
+    if (percent < 3) return null;
+
+    return percent.toFixed(1) + '%';
+  },
+  color: '#ffffff',
+  font: { weight: '700', size: 11 },
+  clamp: true
+
+
+
+          
+        }
+      }
+    },
+    plugins: [ChartDataLabels]
+  }
+);
+
+donutMode = 'percent';
+
+
+// ===== DRAW LEGEND ICONS (SAME AS MAP) =====
+drawLegendIcon('lg-solar', createSolarTankIcon());
+drawLegendIcon('lg-street-working', createStreetLightIcon('#475569', '#facc15', true));
+drawLegendIcon('lg-street-not', createStreetLightIcon('#dc2626', '#dc2626', false));
+
+drawLegendIcon('lg-hand-working', createHandPumpIcon('#6b7280'));
+drawLegendIcon('lg-hand-not', createHandPumpIcon('#dc2626'));
+
+drawLegendIcon('lg-transformer', createTransformerIcon());
+drawLegendIcon('lg-pds', createPDSIcon());
+drawLegendIcon('lg-panchayat', createPanchayatIcon());
+drawLegendIcon('lg-bank', createBankIcon());
+drawLegendIcon('lg-temple', createTempleIcon());
+drawLegendIcon('lg-anganwadi', createAnganwadiIcon());
+drawLegendIcon('lg-school', createSchoolIcon());
+drawLegendIcon('lg-library', createLibraryIcon());
+drawLegendIcon('lg-community', createCommunityHallIcon());
+
+/* ---------- MOBILE DASHBOARD TOGGLE (FIXED) ---------- */
+const dashBtn = document.getElementById('mobileDashBtn');
+const main = document.querySelector('.main');
+
+dashBtn.onclick = () => {
+
+  if (window.innerWidth <= 900) {
+    // MOBILE MODE
+    document.querySelector('.dashboard')
+      .classList.toggle('open');
+  } else {
+    // DESKTOP MODE
+    document.querySelector('.main')
+      .classList.toggle('dashboard-open');
+  }
+
+  setTimeout(() => {
+    map.resize();
+    if (infraChart) infraChart.resize();
+  }, 350);
+};
+
+
+
+
+}); // ✅ CLOSE Promise.all
+});
+
 
 </script>
 </body>
